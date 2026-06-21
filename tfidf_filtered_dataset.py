@@ -60,11 +60,11 @@ MAX_TRAIN_PER_CLASS = 5000  # maximum instances per class in train set (downsamp
 # ── TF-IDF — change these parameters to tune noise reduction ──────────────
 TFIDF_PARAMS = dict(
     analyzer = 'word',
-    ngram_range = (1, 2),      # unigrams + bigrams
-    max_features= 50000,     # vocabulary cap
-    sublinear_tf= True,        # apply 1 + log(tf) scaling
-    min_df      = 3,           # ignore terms appearing in fewer than N docs
-    max_df      = 0.85,        # ignore terms appearing in more than 95 % of docs
+    ngram_range = (1, 2),
+    max_features= 50000,
+    sublinear_tf= True,
+    min_df      = 3,
+    max_df      = 0.85,
     token_pattern= r'[а-яёa-zА-ЯA-Z]{2,}',  # only Cyrillic/Latin words ≥ 2 chars
 )
 
@@ -264,20 +264,6 @@ def preprocess_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     tqdm.pandas(desc='filter_text')
     df['text_clean'] = df['text'].progress_apply(filter_text)
 
-    # ── Apply marker quality filter BEFORE stemming (saves computation) ──────
-    if 'tag' in df.columns:
-        df['_quality'] = df.apply(lambda r: is_quality_text(r['text_clean'], r['tag']), axis=1)
-        q_counts   = df[df['_quality']]['tag'].value_counts()
-        all_counts = df['tag'].value_counts()
-        before = len(df)
-        df = df[df['_quality']].drop(columns=['_quality']).reset_index(drop=True)
-        print(f"After quality filter:               removed {before - len(df):,} -> {len(df):,} kept")
-        print("Per-class quality keep rate:")
-        for tag in all_counts.index:
-            kept  = q_counts.get(tag, 0)
-            total = all_counts[tag]
-            print(f"  {tag:30s}: kept {kept:5,}/{total:5,}  ({kept/total*100:.1f}%)")
-
     tqdm.pandas(desc='stopwords+lemmatize+stem')
     df['text_processed'] = df['text_clean'].progress_apply(remove_stopwords_and_normalize)
 
@@ -289,6 +275,22 @@ def preprocess_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     before = len(df)
     df = df.drop_duplicates(subset=['text_processed', 'tag']).reset_index(drop=True)
     print(f"After de-duplication:               removed {before - len(df):,} -> {len(df):,} kept")
+
+    # ── Apply marker quality filter on processed (lemmatized+stemmed) tokens ──
+    if 'tag' in df.columns:
+        df['_quality'] = df.apply(
+            lambda r: is_quality_text(r['text_processed'], r['tag']), axis=1
+        )
+        q_counts   = df[df['_quality']]['tag'].value_counts()
+        all_counts = df['tag'].value_counts()
+        before = len(df)
+        df = df[df['_quality']].drop(columns=['_quality']).reset_index(drop=True)
+        print(f"After quality filter:               removed {before - len(df):,} -> {len(df):,} kept")
+        print("Per-class quality keep rate:")
+        for tag in all_counts.index:
+            kept  = q_counts.get(tag, 0)
+            total = all_counts[tag]
+            print(f"  {tag:30s}: kept {kept:5,}/{total:5,}  ({kept/total*100:.1f}%)")
 
     return df
 
@@ -423,80 +425,74 @@ def upsample_train_set(df_train: pd.DataFrame, min_per_class: int,
     return df_upsampled
 
 
-# Per-class keyword lists.  Checked against the *cleaned* but not yet
-# lemmatised/stemmed text so substrings like 'биполяр' still match the
-# inflected forms 'биполярное', 'биполярный', etc.
 CLASS_MARKERS = {
     'депрессия': [
         'депресси', 'депрессив', 'антидепрессант', 'ангедони',
         'флуоксетин', 'сертралин', 'эсциталопрам', 'венлафаксин', 'миртазапин',
-        'нет сил', 'ничего не хочу', 'апати', 'суицид', 'суицидальн',
-        'лежу', 'не могу встать', 'без сил', 'нет энергии', 'тоск',
-        'безнадёжн', 'безнадежн', 'опустошён', 'опустошен',
-        'не хочу жить', 'нет желания', 'прокрастинац', 'выгорани',
-        'не могу спать', 'плохо сплю', 'просыпаюсь ночью', 'сплю по',
-        'не чувствую ничего', 'как будто умер', 'равнодушие ко всему',
-        'мысли о смерти', 'не вижу смысл', 'всё бессмысленн', 'виноват во всём',
-        'ненавижу себя', 'я никому не нужен', 'я обуза', 'плачу без причин',
-        'не выхожу из дома', 'не могу работать', 'потерял интерес',
-        'ничего не радует', 'нет удовольствия', 'потерял смысл',
+        'апати', 'тоск', 'безнадёжн', 'безнадежн', 'опустошён', 'опустошен',
+        'суицид', 'суицидальн', 'самоубийств',
+        'нет сил', 'без сил', 'нет энергии', 'нет желания',
+        'плохо сплю', 'просыпаюсь ночью', 'бессонниц', 'гиперсомни',
+        'прокрастинац', 'выгорани', 'лежу',
+        'всё бессмысленн', 'ненавижу себя', 'я обуза',
+        'потерял интерес', 'нет удовольствия', 'потерял смысл',
+        'заторможен', 'вялост', 'истощен',
     ],
     'тревожное р-во': [
         'паническ', 'паник', 'тревог', 'тревожн', 'гтр', 'птср',
-        'агорафоби', 'социофоби', 'социальн тревог', 'генерализованн тревог',
-        'страх', 'боюсь', 'боится',
+        'агорафоби', 'социофоби', 'фоби', 'невроз',
+        'социальн тревог', 'генерализованн тревог',
+        'страх', 'боюсь', 'боится', 'беспокойств', 'волнени',
+        'навязчив', 'избегани', 'катастрофизац',
+        'предчувствие беды', 'ожидание худшего',
         'сердце бьёт', 'сердце бьет', 'сердцебиени', 'учащённ пульс',
-        'не хватает воздуха', 'задыхаюсь', 'удушь', 'ком в горле',
-        'дрожь', 'трясёт', 'потею', 'холодный пот', 'головокружени',
-        'тошнит от тревог', 'живот сводит', 'мышцы напряжен',
-        'фоби', 'навязчив', 'избегани', 'не могу выйти', 'боюсь выходить',
-        'катастрофизац', 'предчувствие беды', 'ожидание худшего',
+        'задыхаюсь', 'удушь', 'дрожь', 'трясёт', 'потею',
+        'холодный пот', 'головокружени', 'живот сводит', 'мышцы напряжен',
+        'боюсь выходить', 'тремор', 'гипервентиляц',
         'вегетатив', 'дереализаци', 'деперсонализаци',
         'грандаксин', 'феназепам', 'атаракс', 'афобазол', 'когнитивно поведенческ',
     ],
     'ОКР': [
-        'ритуал', 'перепроверк', 'навязчив', 'компульси', 'обсесси', 'окр', 'оkр',
-        'проверяю', 'мою руки', 'страх заражени', 'страх загрязнени',
-        'мою посуду', 'протираю', 'дезинфицирую', 'стерильн',
-        'повторяю', 'считаю', 'симметри', 'всё должно быть ровно',
-        'не могу остановиться', 'делаю снова и снова',
-        'страх причинить', 'магическ мышлени', 'навязчивые мысли',
-        'нежелательн мысл', 'страшные мысли лезут', 'мысли против воли',
-        'агрессивн навязчив', 'богохульн мысл',
-        'боюсь причинить вред', 'я не хочу этого', 'мысли ужасают меня',
+        'навязчив', 'компульси', 'обсесси', 'окр', 'оkр', 'навязчивост',
+        'ритуал', 'ритуальн', 'перепроверк', 'проверяю', 'протираю',
+        'дезинфицирую', 'повторяю', 'считаю', 'пересчитыв',
+        'мою руки', 'мою посуду',
+        'стерильн', 'страх заражени', 'страх загрязнени', 'страх причинить',
+        'симметри', 'магическ мышлени', 'навязчивые мысли',
+        'нежелательн мысл', 'агрессивн навязчив', 'богохульн мысл',
+        'перфекционизм', 'иррациональн',
         'флувоксамин', 'кломипрамин', 'анафранил',
     ],
     'ПРЛ': [
-        'пустот', 'идеализаци', 'обесценивани', 'пограничн', 'прл', 'бпр',
-        'страх быть брошен', 'страх одиночеств', 'бурн отношени', 'токсичн отношени',
-        'не могу быть одна', 'цепляюсь за людей', 'резко меняю отношение',
-        'то обожаю то ненавижу', 'черно-белое мышлени', 'всё или ничего',
-        'эмоциональн качел', 'импульсивн', 'вспышки гнева', 'не контролирую эмоци',
-        'резкие перепады', 'захлёстывает', 'не могу успокоиться',
+        'пустот', 'пограничн', 'прл', 'бпр',
+        'идеализаци', 'обесценивани', 'расщеплени', 'черно-белое мышлени',
+        'страх одиночеств', 'бурн отношени', 'токсичн отношени',
+        'размытая идентичность',
+        'эмоциональн качел', 'импульсивн', 'вспышки гнева',
+        'резкие перепады', 'захлёстывает', 'нестабильн',
         'самоповреждени', 'порезы', 'членовредительств', 'режу себя',
-        'нестабильн', 'диссоциаци', 'расщеплени', 'не знаю кто я',
-        'размытая идентичность', 'ощущение пустоты внутри',
-        'диалектическ', 'дбт', 'dbt', 'ламотриджин для настроени',
+        'диссоциаци', 'деперсонализаци',
+        'диалектическ', 'дбт', 'dbt',
     ],
     'БАР': [
-        'биполяр', 'бар ', ' бар', 'мани', 'гипомани', 'нормотимик',
+        'биполяр', 'бар ', ' бар', 'мани', 'гипомани', 'нормотимик', 'циклотими',
         'литий', 'депакин', 'ламиктал', 'ламотриджин',
         'сероквел', 'кветиапин', 'карбамазепин', 'вальпроат', 'тегретол',
         'смена настроени', 'перепады настроени', 'цикл настроени',
-        'эйфори', 'грандиозн', 'не нужен сон', 'не сплю', 'бессонниц',
-        'маниакальн', 'ускоренн мышлени', 'мысли скачут', 'грандиозные планы',
+        'депрессивн эпизод', 'смешанн эпизод',
+        'фаза подъёма', 'фаза спада', 'цикличн',
+        'эйфори', 'грандиозн', 'маниакальн', 'не сплю', 'бессонниц',
+        'ускоренн мышлени', 'мысли скачут', 'грандиозные планы',
         'трачу деньги', 'безрассудн', 'гиперсексуальн',
-        'депрессивн эпизод', 'смешанн эпизод', 'после подъёма упадок',
-        'цикличн', 'фаза подъёма', 'фаза спада', 'снова поднимается настроение',
     ],
     'шизофрения': [
-        'шизо',
-        'галлюцинаци', 'галлюцинир', 'слышу голоса', 'голоса', 'голос в голов',
+        'шизо', 'шизотип', 'шизоаффектив', 'параноидн', 'паранои',
+        'галлюцинаци', 'галлюцинир', 'слышу голоса', 'голоса',
         'бред', 'бредов', 'бред преследовани', 'бред величи',
         'психоз', 'психотич', 'острый психоз',
-        'негативн симптом', 'позитивн симптом', 'уплощённ аффект',
-        'алоги', 'абули',
-        'разорванн мышлени', 'расщеплени личност', 'параноидн',
+        'алоги', 'абули', 'уплощённ аффект',
+        'негативн симптом', 'позитивн симптом',
+        'разорванн мышлени', 'расщеплени личност',
         'деперсонализаци', 'дереализаци', 'кататони',
         'антипсихотик', 'нейролептик',
         'галоперидол', 'клозапин', 'оланзапин', 'рисперидон', 'арипипразол',
@@ -505,20 +501,43 @@ CLASS_MARKERS = {
     ],
 }
 
-# Classes with few examples — softer rule: 200-char texts are kept even with
-# fewer than 3 marker hits (to preserve rare training signal).
+# Classes with few examples — softer rule: texts are kept even with
+# fewer marker hits if they have enough words (to preserve rare training signal).
 RARE_CLASSES = {'БАР', 'ОКР', 'ПРЛ'}
+RARE_MIN_WORDS = 20  # ~200 chars of raw text after stemming
 
 
-def is_quality_text(text: str, tag: str) -> bool:
-    """Keep text if it has ≥ 3 class markers, or is from a rare class and ≥ 200 chars."""
-    if not isinstance(text, str):
+def _normalize_marker(phrase: str) -> str:
+    """Lemmatize + stem each word in a marker phrase (same pipeline as the main text)."""
+    tokens = phrase.split()
+    result = []
+    for t in tokens:
+        lemma = MORPH.parse(t)[0].normal_form
+        result.append(STEMMER.stem(lemma))
+    return ' '.join(result)
+
+
+# Pre-compute processed (lemmatized + stemmed) forms of every marker so that
+# they can be matched directly against the already-processed text tokens.
+CLASS_MARKERS_PROCESSED: dict[str, list[str]] = {
+    tag: [_normalize_marker(m) for m in markers]
+    for tag, markers in CLASS_MARKERS.items()
+}
+
+
+def is_quality_text(text_processed: str, tag: str) -> bool:
+    """Keep text if it has ≥ 1 class marker (in processed token space),
+    or is from a rare class with enough tokens."""
+    if not isinstance(text_processed, str):
         return False
-    if tag not in CLASS_MARKERS:
+    if tag not in CLASS_MARKERS_PROCESSED:
         return True
-    text_lower = text.lower()
-    found = sum(1 for m in CLASS_MARKERS[tag] if m in text_lower)
-    return found >= 1 or (tag in RARE_CLASSES and len(text) >= 200)
+    tokens = set(text_processed.split())
+    found = sum(
+        1 for phrase in CLASS_MARKERS_PROCESSED[tag]
+        if all(t in tokens for t in phrase.split())
+    )
+    return found >= 1 or (tag in RARE_CLASSES and len(tokens) >= RARE_MIN_WORDS)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -647,7 +666,7 @@ TARGET_F1 = 0.60
 
 results = {}  # label -> (f1_macro, accuracy, y_pred)
 
-SVC_CS = [0.05, 0.1, 0.2, 0.3, 0.5, 1.0]
+SVC_CS = [0.1, 0.2, 0.3, 0.5, 1.0, 1.5, 2.0, 3.0]
 
 # ── Helper for sklearn classifiers ─────────────────────────────────────────
 def evaluate(label: str, clf, pbar: tqdm) -> None:
