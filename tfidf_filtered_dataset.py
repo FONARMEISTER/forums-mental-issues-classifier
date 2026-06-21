@@ -16,7 +16,6 @@ Semantic blocks (each block can be copy-pasted into a Jupyter notebook cell):
 # ══════════════════════════════════════════════════════════════════════════════
 import re
 import warnings
-import argparse
 
 import nltk
 import numpy as np
@@ -35,7 +34,6 @@ from nltk.stem.snowball import SnowballStemmer
 
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import accuracy_score, classification_report, f1_score
-from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 from sklearn.svm import LinearSVC
 
@@ -46,15 +44,16 @@ AUGMENTED_DATA_PATH = 'augmented_data.csv'
 # ── Filtering thresholds ───────────────────────────────────────────────────
 MIN_WORDS    = 3      # minimum token count after cleaning (drop very short texts)
 MAX_WORDS    = 1000    # truncate very long texts to this many tokens
-MIN_CHAR_LEN = 10     # drop texts shorter than this many characters (raw)
 
 # ── Classes to drop (ambiguous / too noisy) ────────────────────────────────
 CLASSES_TO_DROP = ['тревожное р-во/депрессия', 'паранойя', 'тревожное р-во/невроз']
 
+# ── Augmentation ───────────────────────────────────────────────────────────
+USE_AUGMENTATION = True   # set to False to skip augmentation entirely
+
 # ── Split ──────────────────────────────────────────────────────────────────
-TEST_SIZE    = 0.20
 RANDOM_STATE = 42
-FIXATED_TEST_SIZE = 5000  # fixated test set size from initial data
+FIXATED_TEST_SIZE = 5000  # number of texts held out for the test set
 MIN_TRAIN_PER_CLASS = 3000  # minimum instances per class in train set after upsampling
 MAX_TRAIN_PER_CLASS = 5000  # maximum instances per class in train set (downsample larger classes)
 
@@ -92,25 +91,15 @@ RU_STOPWORDS |= DOMAIN_STOPWORDS
 
 np.random.seed(RANDOM_STATE)
 
-# ── CLI Arguments ───────────────────────────────────────────────────────────
-parser = argparse.ArgumentParser(description='Mental Health Text Classification — TF-IDF Pipeline')
-parser.add_argument('--augment', action='store_true',
-                    help='Augment training data with augmented_data.csv')
-parser.add_argument('--augment-path', type=str, default=AUGMENTED_DATA_PATH,
-                    help=f'Path to augmented data file (default: {AUGMENTED_DATA_PATH})')
-args = parser.parse_args()
-
 print("=" * 64)
 print("MENTAL HEALTH CLASSIFICATION — TF-IDF Pipeline")
-print(f"Data:        {DATA_PATH}")
-print(f"Min words:   {MIN_WORDS}  |  Max words: {MAX_WORDS}")
-print(f"Test size:   {TEST_SIZE}")
-print(f"Fixated test size: {FIXATED_TEST_SIZE}")
-print(f"Min train per class: {MIN_TRAIN_PER_CLASS}  |  Max train per class: {MAX_TRAIN_PER_CLASS}")
-print(f"Augmentation: {'Enabled' if args.augment else 'Disabled'}")
-if args.augment:
-    print(f"Augment path: {args.augment_path}")
-print(f"TF-IDF ngram:{TFIDF_PARAMS['ngram_range']}  "
+print(f"Data:             {DATA_PATH}")
+print(f"Min words:        {MIN_WORDS}  |  Max words: {MAX_WORDS}")
+print(f"Test set size:    {FIXATED_TEST_SIZE}")
+print(f"Min/max per class (train): {MIN_TRAIN_PER_CLASS} / {MAX_TRAIN_PER_CLASS}")
+print(f"Augmentation:     {'Enabled' if USE_AUGMENTATION else 'Disabled'}"
+      + (f"  ({AUGMENTED_DATA_PATH})" if USE_AUGMENTATION else ""))
+print(f"TF-IDF ngram:     {TFIDF_PARAMS['ngram_range']}  "
       f"max_features={TFIDF_PARAMS['max_features']}  "
       f"min_df={TFIDF_PARAMS['min_df']}  "
       f"max_df={TFIDF_PARAMS['max_df']}")
@@ -253,26 +242,18 @@ def remove_stopwords_and_normalize(text: str) -> str:
     tokens = _apply_negation(tokens)
     # Step 3: drop stopwords — compare lowercase so "Я", "Мне" etc. are caught
     tokens = [t for t in tokens if t.lower() not in RU_STOPWORDS]
-    # Step 4: lemmatize — handle "не_word" compounds; pymorphy3 returns lowercase
-    lemmatized = []
+    # Steps 4+5: lemmatize then stem in one pass
+    result = []
     for t in tokens:
         if t.startswith('не_'):
             word = t[3:]
             lemma = MORPH.parse(word)[0].normal_form if word else word
-            lemmatized.append('не_' + lemma)
+            stem  = STEMMER.stem(lemma) if lemma else lemma
+            result.append('не_' + stem)
         else:
-            lemmatized.append(MORPH.parse(t)[0].normal_form)
-    tokens = lemmatized
-    # Step 5: stem the lemma (negated prefix preserved, only word part stemmed)
-    stemmed = []
-    for t in tokens:
-        if t.startswith('не_'):
-            word = t[3:]
-            stemmed.append('не_' + STEMMER.stem(word) if word else t)
-        else:
-            stemmed.append(STEMMER.stem(t))
-    tokens = stemmed
-    tokens = [t for t in tokens if len(t) >= 2]
+            lemma = MORPH.parse(t)[0].normal_form
+            result.append(STEMMER.stem(lemma))
+    tokens = [t for t in result if len(t) >= 2]
     return ' '.join(tokens)
 
 
@@ -283,10 +264,6 @@ def preprocess_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 
     tqdm.pandas(desc='filter_text')
     df['text_clean'] = df['text'].progress_apply(filter_text)
-
-    before = len(df)
-    df = df[df['text_clean'].str.len() >= MIN_CHAR_LEN].copy().reset_index(drop=True)
-    print(f"After min-char filter ({MIN_CHAR_LEN}): removed {before - len(df):,} -> {len(df):,} kept")
 
     tqdm.pandas(desc='stopwords+lemmatize+stem')
     df['text_processed'] = df['text_clean'].progress_apply(remove_stopwords_and_normalize)
@@ -433,36 +410,6 @@ def upsample_train_set(df_train: pd.DataFrame, min_per_class: int,
     return df_upsampled
 
 
-def is_quality_text(text: str, tag: str) -> bool:
-    """
-    Marker-based quality filter.
-
-    A text passes if EITHER:
-      (a) it contains ≥ 3 tokens from the class-specific marker list, OR
-      (b) the class is rare/weak AND the raw text has ≥ 200 characters
-          (preserves scarce training signal for under-represented classes).
-
-    Texts whose tag is not in CLASS_MARKERS are kept unconditionally.
-    """
-    if not isinstance(text, str):
-        return False
-    text_lower = text.lower()
-
-    if tag not in CLASS_MARKERS:
-        return True   # unknown / unconfigured tag — keep it
-
-    markers = CLASS_MARKERS[tag]
-    found   = sum(1 for m in markers if m in text_lower)
-
-    if found >= 1:
-        return True
-
-    if tag in RARE_CLASSES and len(text) >= 200:
-        return True
-
-    return False
-
-
 # Per-class keyword lists.  Checked against the *cleaned* but not yet
 # lemmatised/stemmed text so substrings like 'биполяр' still match the
 # inflected forms 'биполярное', 'биполярный', etc.
@@ -527,6 +474,17 @@ CLASS_MARKERS = {
 RARE_CLASSES = {'БАР', 'ОКР', 'ПРЛ', 'шизофрени'}
 
 
+def is_quality_text(text: str, tag: str) -> bool:
+    """Keep text if it has ≥ 3 class markers, or is from a rare class and ≥ 200 chars."""
+    if not isinstance(text, str):
+        return False
+    if tag not in CLASS_MARKERS:
+        return True
+    text_lower = text.lower()
+    found = sum(1 for m in CLASS_MARKERS[tag] if m in text_lower)
+    return found >= 1 or (tag in RARE_CLASSES and len(text) >= 200)
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # Block 3 — Load, Preprocess Entire Dataset & Split
 # ══════════════════════════════════════════════════════════════════════════════
@@ -572,24 +530,17 @@ print(df_initial['tag'].value_counts().to_string())
 # ── Marker-based quality filter ───────────────────────────────────────────────
 print("\n[2b/6] Applying marker-based quality filter...")
 
-# Check against text_clean (cleaned but pre-lemmatisation — marker substrings
-# are still present in their recognisable inflected forms).
-# Fall back to raw 'text' when text_clean is missing.
-_text_col = 'text_clean' if 'text_clean' in df_initial.columns else 'text'
+# text_clean is pre-lemmatisation — marker substrings still match inflected forms.
 df_initial['_quality'] = df_initial.apply(
-    lambda r: is_quality_text(r[_text_col], r['tag']), axis=1
+    lambda r: is_quality_text(r['text_clean'], r['tag']), axis=1
 )
 
 df_initial_quality = df_initial[df_initial['_quality']].drop(columns=['_quality']).copy()
-df_initial_noise   = df_initial[~df_initial['_quality']].copy()
-
 q_counts   = df_initial_quality['tag'].value_counts()
 all_counts = df_initial['tag'].value_counts()
 
-print(f"Kept  (quality): {len(df_initial_quality):,}  "
-      f"({len(df_initial_quality)/len(df_initial)*100:.1f}%)")
-print(f"Dropped (noise): {len(df_initial_noise):,}  "
-      f"({len(df_initial_noise)/len(df_initial)*100:.1f}%)")
+print(f"Kept  (quality): {len(df_initial_quality):,}  ({len(df_initial_quality)/len(df_initial)*100:.1f}%)")
+print(f"Dropped (noise): {len(df_initial) - len(df_initial_quality):,}  ({(1 - len(df_initial_quality)/len(df_initial))*100:.1f}%)")
 print("\nPer-class quality keep rate:")
 for tag in all_counts.index:
     kept  = q_counts.get(tag, 0)
@@ -626,14 +577,11 @@ print(f"\nTraining data: {len(df_source):,} rows, {df_source['tag'].nunique()} c
 # ══════════════════════════════════════════════════════════════════════════════
 
 # Apply augmentation if requested (augmented data will be preprocessed inside)
-if args.augment:
-    df_source = augment_training_data(df_source, args.augment_path)
-
-# Prepare training data
-df_train_final = df_source.copy()
+if USE_AUGMENTATION:
+    df_source = augment_training_data(df_source, AUGMENTED_DATA_PATH)
 
 # Downsample training set to cap classes at MAX_TRAIN_PER_CLASS
-df_train_final = downsample_train_set(df_train_final, MAX_TRAIN_PER_CLASS, RANDOM_STATE)
+df_train_final = downsample_train_set(df_source, MAX_TRAIN_PER_CLASS, RANDOM_STATE)
 
 # Upsample training set to ensure minimum samples per class
 df_train_final = upsample_train_set(df_train_final, MIN_TRAIN_PER_CLASS, RANDOM_STATE)
