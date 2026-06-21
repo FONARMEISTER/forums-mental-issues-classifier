@@ -8,3 +8,4 @@ __pycache__/
 agent/
 logs/
 *.log
+.DS_store
