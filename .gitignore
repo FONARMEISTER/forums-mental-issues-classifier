@@ -1,9 +1,10 @@
 filter_dataset_eliza.py
-filter_dataset.py
+generate_texts.py
+ai_dataset_filtration/
 artifacts
 .emb_cache/
 __pycache__/
 .bert_ft_out/
 agent/
 logs/
-generate_texts.py
+*.log

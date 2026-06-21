@@ -1,5 +1,5 @@
 """
-Mental Health Text Classification — v18
+Mental Health Text Classification — v17
 =======================================
 1. Drop ambiguous classes.
 2. Text filtering by MIN_WORDS.
@@ -8,9 +8,6 @@ Mental Health Text Classification — v18
 5. Fine-tune the transformer classifier first.
 6. Extract embeddings from the fine-tuned transformer encoder.
 7. Train/evaluate SVM and MLP on fine-tuned transformer embeddings only.
-8. [NEW] Iterative dataset pruning: remove one random text per iteration,
-   keep removal if macroF1 improves, save checkpoint after every iteration.
-   Stop when total texts < 25 000 or any non-dropped class drops below 500 texts.
 
 Split: 0.8 train / 0.2 test (stratified). Augmented data is never used for test evaluation.
 """
@@ -28,7 +25,7 @@ import pandas as pd
 
 warnings.filterwarnings('ignore')
 
-import torch
+import torch 
 from torch.utils.data import DataLoader, Dataset
 
 from transformers import (
@@ -43,8 +40,6 @@ from nltk.corpus import stopwords
 from sklearn.model_selection import train_test_split
 from sklearn.svm import LinearSVC
 from sklearn.neural_network import MLPClassifier
-from sklearn.svm import LinearSVC
-from sklearn.neural_network import MLPClassifier
 from sklearn.preprocessing import normalize, LabelEncoder, StandardScaler
 from sklearn.metrics import classification_report, accuracy_score, f1_score
 
@@ -54,31 +49,24 @@ from sklearn.metrics import classification_report, accuracy_score, f1_score
 DATA_PATH = 'data_filtered.csv'
 AUGMENTED_DATA_PATH = 'augmented_data.csv'
 USE_AUGMENTATION = True
-SBERT_MODEL = 'DeepPavlov/rubert-base-cased'
+SBERT_MODEL = 'ai-forever/ru-en-RoSBERTa'
 RANDOM_STATE = 42
-MIN_WORDS = 7
+MIN_WORDS = 5
 MAX_WORDS = 1500
-EMB_BATCH_SIZE = 32
+EMB_BATCH_SIZE = 64
 TEST_SIZE = 0.20
 CLASS_CAP = 12000
 
 RUN_BERT_FINETUNE = True
 BERT_FT_EPOCHS = 3
-BERT_FT_BATCH = 32
-BERT_FT_EVAL_BATCH = 32
+BERT_FT_BATCH = 64
+BERT_FT_EVAL_BATCH = 64
 BERT_FT_LR = 2e-5 * (BERT_FT_BATCH / 16) ** 0.5
-BERT_FT_MAX_LEN = 512
-BERT_FT_MAX_GRAD_NORM = 1.0
+BERT_FT_MAX_LEN = 256
 BERT_FT_GRADIENT_CHECKPOINTING = False
 BERT_FT_OUTPUT_DIR = '.bert_ft_out'
 
-# ── Pruning config ──────────────────────────
-PRUNE_CHECKPOINT_PATH = 'data_filtered_pruned_checkpoint.csv'
-PRUNE_MIN_TOTAL_WORDS = 25_000   # stop when total words drop below this
-PRUNE_MIN_CLASS_WORDS = 500      # each class must keep at least this many words
-
 RU_STOPWORDS = set(stopwords.words('russian'))
-
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -106,14 +94,6 @@ def parse_args():
         default=SBERT_MODEL,
         help='HuggingFace model name or local path used as the transformer encoder/classifier.',
     )
-    parser.add_argument(
-        '--run-pruning',
-        dest='run_pruning',
-        type=int,
-        choices=(0, 1),
-        default=0,
-        help='Run iterative dataset pruning after the initial pipeline: 1=yes, 0=no.',
-    )
     args, unknown = parser.parse_known_args()
     if unknown:
         print(f"[WARN] Ignoring unknown CLI arguments: {unknown}")
@@ -126,7 +106,6 @@ CLI_ARGS = parse_args()
 BERT_FT_EPOCHS = CLI_ARGS.bert_ft_epochs
 USE_AUGMENTATION = bool(CLI_ARGS.use_augmentation)
 SBERT_MODEL = CLI_ARGS.sbert_model
-RUN_PRUNING = bool(CLI_ARGS.run_pruning)
 BERT_FT_OUTPUT_DIR = os.path.join(
     BERT_FT_OUTPUT_DIR,
     f"epochs_{BERT_FT_EPOCHS}_aug_{int(USE_AUGMENTATION)}",
@@ -147,17 +126,13 @@ else:
     DEVICE = 'cpu'
 
 print("=" * 64)
-print("MENTAL HEALTH CLASSIFICATION v18 (fine-tune → embeddings → SVM/MLP)")
+print("MENTAL HEALTH CLASSIFICATION v17 (fine-tune → embeddings → SVM/MLP)")
 print(f"Device:          {DEVICE}")
 print(f"Transformer:     {SBERT_MODEL}")
 print(f"FT epochs:       {BERT_FT_EPOCHS}")
-print(f"FT batch:        {BERT_FT_BATCH}")
-print(f"FT LR:           {BERT_FT_LR:g}")
-print(f"FT max grad norm:{BERT_FT_MAX_GRAD_NORM:g}")
 print(f"Use augment:     {USE_AUGMENTATION}")
 print(f"Augment path:    {AUGMENTED_DATA_PATH}")
 print(f"FT output dir:   {BERT_FT_OUTPUT_DIR}")
-print(f"Run pruning:     {RUN_PRUNING}")
 print("=" * 64)
 
 # ─────────────────────────────────────────────
@@ -215,6 +190,90 @@ print("\nPer-class counts:")
 print(df['tag'].value_counts().to_string())
 
 # ─────────────────────────────────────────────
+# 2. Class cap + train/test split + train-only augmentation
+# ─────────────────────────────────────────────
+print(f"\n[2/6] Per-class cap={CLASS_CAP} + 80/20 stratified split + optional train-only augmentation...")
+
+capped = []
+for tag, g in df.groupby('tag'):
+    if len(g) > CLASS_CAP:
+        g = g.sample(n=CLASS_CAP, random_state=RANDOM_STATE)
+    capped.append(g)
+df_capped = pd.concat(capped).sample(frac=1, random_state=RANDOM_STATE).reset_index(drop=True)
+n_total = len(df_capped)
+MIN_KEEP = 25000
+print(f"After capping: {n_total:,} samples")
+assert n_total >= MIN_KEEP, f"Need ≥ {MIN_KEEP} texts, have {n_total}"
+print(df_capped['tag'].value_counts().to_string())
+
+le = LabelEncoder()
+y_all = le.fit_transform(df_capped['tag'].to_numpy())
+X_sbert_all = df_capped['text_sbert'].to_numpy(dtype=object)
+NUM_CLASSES = len(le.classes_)
+print(f"Classes ({NUM_CLASSES}): {list(le.classes_)}")
+
+idx = np.arange(len(y_all))
+idx_tr, idx_te = train_test_split(
+    idx, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=y_all
+)
+
+X_tr_sbert_raw = X_sbert_all[idx_tr]
+X_te_sbert_raw = X_sbert_all[idx_te]
+y_tr = y_all[idx_tr]
+y_te = y_all[idx_te]
+base_train_size = len(y_tr)
+base_test_size = len(y_te)
+
+print("Base train class counts:",
+      dict(zip(le.classes_, np.bincount(y_tr, minlength=NUM_CLASSES))))
+
+if USE_AUGMENTATION and AUGMENTED_DATA_PATH and os.path.exists(AUGMENTED_DATA_PATH):
+    print(f"\nLoading train-only augmented data: {AUGMENTED_DATA_PATH}")
+    df_aug = pd.read_csv(AUGMENTED_DATA_PATH, sep=';', encoding='utf-8')[['text', 'tag']]
+    print(f"Augmented raw: {len(df_aug):,} rows, {df_aug['tag'].nunique()} classes")
+
+    before = len(df_aug)
+    df_aug = df_aug[~df_aug['tag'].isin(CLASSES_TO_DROP)].copy()
+    print(f"Augmented dropped ambiguous classes: {before - len(df_aug):,} → {len(df_aug):,} rows")
+
+    df_aug = clean_dataframe(df_aug, 'Augmented')
+
+    unknown_aug_tags = sorted(set(df_aug['tag']) - set(le.classes_))
+    if unknown_aug_tags:
+        before = len(df_aug)
+        df_aug = df_aug[df_aug['tag'].isin(le.classes_)].copy()
+        print(f"Augmented dropped unknown classes {unknown_aug_tags}: {before-len(df_aug):,} rows")
+
+    if len(df_aug) > 0:
+        y_aug = le.transform(df_aug['tag'].to_numpy())
+        X_tr_sbert_raw = np.concatenate([
+            X_tr_sbert_raw,
+            df_aug['text_sbert'].to_numpy(dtype=object),
+        ])
+        y_tr = np.concatenate([y_tr, y_aug])
+        print("Augmented train class counts:",
+              dict(zip(le.classes_, np.bincount(y_aug, minlength=NUM_CLASSES))))
+        print(f"Merged {len(y_aug):,} augmented rows into TRAIN only.")
+    else:
+        print("No augmented rows remained after filtering; training uses base data only.")
+elif USE_AUGMENTATION and AUGMENTED_DATA_PATH:
+    print(f"\n[WARN] Augmented data file not found: {AUGMENTED_DATA_PATH}; training uses base data only.")
+else:
+    print("\nAugmentation disabled by CLI/config; training uses base data only.")
+
+print(f"Train: {len(y_tr):,} ({base_train_size:,} base + {len(y_tr)-base_train_size:,} augmented) | "
+      f"Test: {len(y_te):,} (base only)")
+print("Final train class counts:",
+      dict(zip(le.classes_, np.bincount(y_tr, minlength=NUM_CLASSES))))
+print("Test class counts (evaluation set, no augmented data):",
+      dict(zip(le.classes_, np.bincount(y_te, minlength=NUM_CLASSES))))
+n_used = base_train_size + base_test_size
+print(f"Total base texts used for split/evaluation accounting: {n_used:,}")
+assert n_used >= MIN_KEEP, f"Need ≥ MIN_KEEP texts, have {n_used}"
+assert y_tr.min() >= 0 and y_tr.max() < NUM_CLASSES
+assert y_te.min() >= 0 and y_te.max() < NUM_CLASSES
+
+# ─────────────────────────────────────────────
 # Shared transformer dataset / trainer helpers
 # ─────────────────────────────────────────────
 class TextDataset(Dataset):
@@ -256,70 +315,6 @@ def make_training_args(ft_device: str):
         learning_rate=BERT_FT_LR,
         weight_decay=0.01,
         warmup_ratio=0.1,
-        max_grad_norm=BERT_FT_MAX_GRAD_NORM,
-        logging_steps=100,
-        save_strategy='no',
-        report_to='none',
-        seed=RANDOM_STATE,
-        data_seed=RANDOM_STATE,
-        gradient_checkpointing=BERT_FT_GRADIENT_CHECKPOINTING,
-    )
-    if ft_device == 'mps':
-        if 'use_mps_device' in training_args_params:
-            args_kwargs['use_mps_device'] = True
-    elif ft_device == 'cpu':
-        if 'use_cpu' in training_args_params:
-            args_kwargs['use_cpu'] = True
-        elif 'no_cuda' in training_args_params:
-            args_kwargs['no_cuda'] = True
-        if 'use_mps_device' in training_args_params:
-            args_kwargs['use_mps_device'] = False
-    return TrainingArguments(**args_kwargs)
-
-
-def compute_metrics(eval_pred):
-    logits, labels = eval_pred
-    preds = np.argmax(logits, axis=1)
-    return {
-        'accuracy': accuracy_score(labels, preds),
-        'f1_macro': f1_score(labels, preds, average='macro'),
-    }
-
-
-# ─────────────────────────────────────────────
-# Pipeline function (steps 2–5) — reusable for pruning
-# ─────────────────────────────────────────────
-SVM_CS = [0.05, 0.1, 0.2, 0.3, 0.5, 1]
-
-
-def make_model(kind: str, **kwargs):
-    if kind == 'SVM':
-        return LinearSVC(
-            C=kwargs.get('C', 1.0), max_iter=8000,
-            class_weight='balanced',
-            random_state=RANDOM_STATE,
-        )
-    if kind == 'MLP':
-        return MLPClassifier(
-            hidden_layer_sizes=(256, 128),
-            activation='relu', solver='adam',
-            batch_size=256, max_iter=60, early_stopping=True,
-            random_state=RANDOM_STATE,
-        )
-    raise ValueError(kind)
-
-
-model_specs = (
-    training_args_params = inspect.signature(TrainingArguments.__init__).parameters
-    args_kwargs = dict(
-        output_dir=BERT_FT_OUTPUT_DIR,
-        num_train_epochs=BERT_FT_EPOCHS,
-        per_device_train_batch_size=BERT_FT_BATCH,
-        per_device_eval_batch_size=BERT_FT_EVAL_BATCH,
-        learning_rate=BERT_FT_LR,
-        weight_decay=0.01,
-        warmup_ratio=0.1,
-        max_grad_norm=BERT_FT_MAX_GRAD_NORM,
         logging_steps=100,
         save_strategy='no',
         report_to='none',
