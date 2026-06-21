@@ -1,0 +1,105 @@
+================================================================
+MENTAL HEALTH CLASSIFICATION v17 (fine-tune → embeddings → SVM/MLP)
+Device:          cuda
+Transformer:     ai-forever/ru-en-RoSBERTa
+FT epochs:       3
+Use augment:     False
+Augment path:    augmented_data.csv
+FT output dir:   .bert_ft_out/epochs_3_aug_0
+================================================================
+
+[1/6] Loading & filtering data...
+Raw: 31,402 rows, 9 classes
+Dropped ambiguous classes: 1,108 → 30,294 rows, 6 classes
+Base after min-words (5): dropped 1,048 → 29,246 kept
+Base after de-dup:                dropped 107 → 29,139 kept
+
+Per-class counts:
+tag
+депрессия         16077
+тревожное р-во     5655
+ОКР                2751
+ПРЛ                2621
+БАР                1325
+шизофрения          710
+
+[2/6] Per-class cap=12000 + 80/20 stratified split + optional train-only augmentation...
+After capping: 25,062 samples
+tag
+депрессия         12000
+тревожное р-во     5655
+ОКР                2751
+ПРЛ                2621
+БАР                1325
+шизофрения          710
+Classes (6): ['БАР', 'ОКР', 'ПРЛ', 'депрессия', 'тревожное р-во', 'шизофрения']
+Base train class counts: {'БАР': np.int64(1060), 'ОКР': np.int64(2201), 'ПРЛ': np.int64(2097), 'депрессия': np.int64(9599), 'тревожное р-во': np.int64(4524), 'шизофрения': np.int64(568)}
+
+Augmentation disabled by CLI/config; training uses base data only.
+Train: 20,049 (20,049 base + 0 augmented) | Test: 5,013 (base only)
+Final train class counts: {'БАР': np.int64(1060), 'ОКР': np.int64(2201), 'ПРЛ': np.int64(2097), 'депрессия': np.int64(9599), 'тревожное р-во': np.int64(4524), 'шизофрения': np.int64(568)}
+Test class counts (evaluation set, no augmented data): {'БАР': np.int64(265), 'ОКР': np.int64(550), 'ПРЛ': np.int64(524), 'депрессия': np.int64(2401), 'тревожное р-во': np.int64(1131), 'шизофрения': np.int64(142)}
+Total base texts used for split/evaluation accounting: 25,062
+
+[3/6] Fine-tuning transformer classifier before embedding extraction...
+Fine-tune requested device: cuda
+Gradient checkpointing disabled.
+Trainer device: cuda:0
+{'loss': '1.285', 'grad_norm': '5.183', 'learning_rate': '3.981e-05', 'epoch': '0.3185'}
+{'loss': '1.013', 'grad_norm': '4.852', 'learning_rate': '3.509e-05', 'epoch': '0.6369'}
+{'loss': '0.9655', 'grad_norm': '5.755', 'learning_rate': '3.037e-05', 'epoch': '0.9554'}
+{'loss': '0.8067', 'grad_norm': '8.192', 'learning_rate': '2.564e-05', 'epoch': '1.274'}
+{'loss': '0.7754', 'grad_norm': '7.3', 'learning_rate': '2.092e-05', 'epoch': '1.592'}
+{'loss': '0.7354', 'grad_norm': '5.603', 'learning_rate': '1.62e-05', 'epoch': '1.911'}
+{'loss': '0.5968', 'grad_norm': '7.189', 'learning_rate': '1.148e-05', 'epoch': '2.229'}
+{'loss': '0.4918', 'grad_norm': '8.101', 'learning_rate': '6.753e-06', 'epoch': '2.548'}
+{'loss': '0.4755', 'grad_norm': '9.016', 'learning_rate': '2.031e-06', 'epoch': '2.866'}
+{'train_runtime': '666.2', 'train_samples_per_second': '90.29', 'train_steps_per_second': '1.414', 'train_loss': '0.78', 'epoch': '3'}
+BERT fine-tune training: 666.4s
+BERT-FT end-to-end: F1=0.6303  Acc=0.6962
+
+[4/6] Extracting embeddings from fine-tuned transformer encoder...
+  Encoding 20,049 train texts on cuda:0...
+    encoded 12,800/20,049
+  train embeddings: (20049, 1024) (77.3s)
+  Encoding 5,013 test texts on cuda:0...
+  test embeddings: (5013, 1024) (19.1s)
+Fine-tuned embeddings: train=(20049, 1024), test=(5013, 1024)
+
+[5/5] Benchmarking SVM / MLP on fine-tuned BERT embeddings ...
+  SVM(C=0.1) @ bert_ft_emb             | F1=0.6046  Acc=0.6719  (37.2s)
+  SVM(C=0.3) @ bert_ft_emb             | F1=0.5916  Acc=0.6635  (68.9s)
+  SVM(C=1.0) @ bert_ft_emb             | F1=0.5882  Acc=0.6611  (131.5s)
+  SVM(C=3.0) @ bert_ft_emb             | F1=0.5865  Acc=0.6593  (138.8s)
+  SVM(C=10.0) @ bert_ft_emb            | F1=0.5856  Acc=0.6567  (100.7s)
+  MLP @ bert_ft_emb                    | F1=0.6156  Acc=0.6862  (4.4s)
+
+================================================================
+BEST MODEL: BERT-FT @ end-to-end classifier
+================================================================
+Accuracy:      0.6962  (69.62%)
+F1 (macro):    0.6303
+F1 (weighted): 0.6922
+
+=== Per-class report ===
+                precision    recall  f1-score   support
+
+           БАР     0.6020    0.4566    0.5193       265
+           ОКР     0.7197    0.6164    0.6641       550
+           ПРЛ     0.6132    0.5477    0.5786       524
+     депрессия     0.7254    0.8055    0.7634      2401
+тревожное р-во     0.6841    0.6375    0.6600      1131
+    шизофрения     0.5752    0.6197    0.5966       142
+
+      accuracy                         0.6962      5013
+     macro avg     0.6533    0.6139    0.6303      5013
+  weighted avg     0.6930    0.6962    0.6922      5013
+
+=== All Results Summary (F1 macro, Acc) ===
+  F1=0.6303  Acc=0.6962  BERT-FT @ end-to-end classifier
+  F1=0.6156  Acc=0.6862  MLP @ bert_ft_emb
+  F1=0.6046  Acc=0.6719  SVM(C=0.1) @ bert_ft_emb
+  F1=0.5916  Acc=0.6635  SVM(C=0.3) @ bert_ft_emb
+  F1=0.5882  Acc=0.6611  SVM(C=1.0) @ bert_ft_emb
+  F1=0.5865  Acc=0.6593  SVM(C=3.0) @ bert_ft_emb
+  F1=0.5856  Acc=0.6567  SVM(C=10.0) @ bert_ft_emb
