@@ -53,11 +53,11 @@ USE_AUGMENTATION = True   # set to False to skip augmentation entirely
 
 # ── Split ──────────────────────────────────────────────────────────────────
 RANDOM_STATE = 42
-FIXATED_TEST_SIZE = 5000  # number of texts held out for the test set
-MIN_TRAIN_PER_CLASS = 3000  # minimum instances per class in train set after upsampling
-MAX_TRAIN_PER_CLASS = 5000  # maximum instances per class in train set (downsample larger classes)
+FIXATED_TEST_SIZE = 5000
+MIN_TRAIN_PER_CLASS = 3000 
+MAX_TRAIN_PER_CLASS = 5000
 
-# ── TF-IDF — change these parameters to tune noise reduction ──────────────
+# ── TF-IDF parameters ──────────────
 TFIDF_PARAMS = dict(
     analyzer = 'word',
     ngram_range = (1, 2),
@@ -65,7 +65,6 @@ TFIDF_PARAMS = dict(
     sublinear_tf= True,
     min_df      = 3,
     max_df      = 0.85,
-    token_pattern= r'[а-яёa-zА-ЯA-Z]{2,}',  # only Cyrillic/Latin words ≥ 2 chars
 )
 
 # ── NLP tools ──────────────────────────────────────────────────────────────
@@ -73,10 +72,7 @@ RU_STOPWORDS = set(stopwords.words('russian'))
 MORPH        = pymorphy3.MorphAnalyzer()
 STEMMER      = SnowballStemmer('russian')
 
-# Domain-specific stopwords: class-neutral words that appear in every class
-# with near-equal frequency and carry zero discriminative signal.
 DOMAIN_STOPWORDS = {
-    # Generic therapy / forum words
     'психолог', 'психотерапевт', 'специалист', 'терапия', 'терапевт',
     'психотерапия', 'психиатр', 'психиатрия',
     'человек', 'люди', 'жизнь', 'время', 'ситуация', 'проблема',
@@ -121,28 +117,22 @@ _WS_RE     = re.compile(r'\s+')
 # Collapse 3+ repeated characters to 2: "оооочень" → "оочень"
 _REPEAT_RE = re.compile(r'(.)\1{2,}')
 
-# ── Domain noise patterns (strip substring, not the whole row) ──────────────
-# Greeting openers: "Здравствуйте!", "Добрый день,", "Доброго времени суток" etc.
 _GREETING_RE = re.compile(
     r'^\s*(?:здравствуйте[!,.]?\s*|добрый\s+\w+[!,.]?\s*'
     r'|доброго\s+\w+(?:\s+\w+)?[!,.]?\s*|привет[!,.]?\s*)+',
     re.I,
 )
-# Sign-off phrases at the end of text
 _SIGNOFF_RE = re.compile(
     r'(?:спасибо\s+за\s+(?:ваш\s+)?ответ|с\s+уважением[\s\w,]*'
     r'|всего\s+доброго|удачи\s+вам|хорошего\s+дня)[.!]?\s*$',
     re.I,
 )
-# "Автор," meta-address at the start (forum convention)
 _META_AUTHOR_RE = re.compile(r'^\s*автор\s*,\s*', re.I)
-# Book / therapy recommendation boilerplate
 _BOOK_RE = re.compile(
     r'(?:рекомендую\s+(?:книгу|почитать)|книга\s+[«\"][^»\"]{1,60}[»\"]'
     r'|читайте\s+книгу)',
     re.I,
 )
-# Social media / channel promos
 _PROMO_RE = re.compile(
     r'(?:подписывайтесь(?:\s+на\s+(?:мой|наш)\s+\w+)?'
     r'|мой\s+(?:канал|блог|телеграм|telegram)'
@@ -192,38 +182,6 @@ def filter_text(text: str) -> str:
     return ' '.join(tokens)
 
 
-def _apply_negation(tokens: list[str]) -> list[str]:
-    """
-    Prefix the token immediately following a negation particle with 'не_'.
-    Comparison against negation particles is case-insensitive so "Не", "НЕ" etc. are caught.
-    The particle itself is discarded (it would be removed as a stopword anyway).
-
-    Example:
-        ["Я", "не", "Грустный", "сегодня"]
-        -> ["Я", "не_Грустный", "сегодня"]
-    """
-    result = []
-    skip_next = False
-    for i, tok in enumerate(tokens):
-        if skip_next:
-            skip_next = False
-            continue
-        tok_lower = tok.lower()
-        if tok_lower in _NEGATION_PARTICLES and i + 1 < len(tokens):
-            next_tok = tokens[i + 1]
-            # Only prefix if the next token is not itself a negation particle
-            if next_tok.lower() not in _NEGATION_PARTICLES:
-                result.append('не_' + next_tok)   # preserve case of the content word
-                skip_next = True
-            else:
-                # Next token is also a negation particle — keep current one
-                result.append(tok)
-        else:
-            # Standalone trailing negation particle or non-negation token — keep it
-            result.append(tok)
-    return result
-
-
 def remove_stopwords_and_normalize(text: str) -> str:
     """
     1. Split into tokens (case preserved from filter_text).
@@ -237,11 +195,7 @@ def remove_stopwords_and_normalize(text: str) -> str:
     so case-sensitivity is preserved through steps 1-3 and normalised from step 4 onward.
     """
     tokens = text.split()
-    # Step 2: negation handling (before stopword removal so "не" is still present)
-    tokens = _apply_negation(tokens)
-    # Step 3: drop stopwords — compare lowercase so "Я", "Мне" etc. are caught
     tokens = [t for t in tokens if t.lower() not in RU_STOPWORDS]
-    # Steps 4+5: lemmatize then stem in one pass
     result = []
     for t in tokens:
         if t.startswith('не_'):
@@ -662,8 +616,6 @@ print(f"Vocabulary size: {len(tfidf.vocabulary_):,}")
 # ══════════════════════════════════════════════════════════════════════════════
 print("\n[6/6] Training classifiers and evaluating...")
 
-TARGET_F1 = 0.60
-
 results = {}  # label -> (f1_macro, accuracy, y_pred)
 
 SVC_CS = [0.1, 0.2, 0.3, 0.5, 1.0, 1.5, 2.0, 3.0]
@@ -686,7 +638,9 @@ def evaluate(label: str, clf, pbar: tqdm) -> None:
 # ── LinearSVC sweep ────────────────────────────────────────────────────────
 svc_specs = [
     (f'LinearSVC  C={C}',
-     LinearSVC(C=C, max_iter=8000, class_weight='balanced',
+     LinearSVC(C=C,
+               max_iter=8000,
+               class_weight='balanced',
                random_state=RANDOM_STATE))
     for C in SVC_CS
 ]
@@ -714,12 +668,6 @@ print(classification_report(
     digits=4,
 ))
 
-print("=" * 64)
-if f1_best >= TARGET_F1:
-    print(f"TARGET ACHIEVED: F1 macro = {f1_best:.4f} >= {TARGET_F1}")
-else:
-    print(f"TARGET NOT MET:  F1 macro = {f1_best:.4f} < {TARGET_F1}")
-print("=" * 64)
 
 print("\n=== All Results Summary (sorted by F1 macro) ===")
 for label, (f1, acc, _) in sorted(results.items(), key=lambda x: -x[1][0]):

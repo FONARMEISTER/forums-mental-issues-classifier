@@ -1,0 +1,229 @@
+================================================================
+MENTAL HEALTH CLASSIFICATION — TF-IDF Pipeline
+Data:             data.csv
+Min words:        3  |  Max words: 1000
+Test set size:    5000
+Min/max per class (train): 3000 / 5000
+Augmentation:     Enabled  (augmented_data.csv)
+TF-IDF ngram:     (1, 2)  max_features=50000  min_df=3  max_df=0.85
+================================================================
+
+[1/6] Loading data and selecting columns...
+Initial data shape: (66460, 5)  |  columns: ['url', 'date', 'text', 'tag', 'source']
+After dropping ambiguous classes: removed 3,123 -> 63,336 rows, 6 classes
+
+Class distribution (initial data):
+tag
+депрессия         37639
+тревожное р-во    10069
+ОКР                5393
+ПРЛ                5219
+БАР                2961
+шизофрения         2055
+
+[2/6] Preprocessing entire dataset...
+After min-words filter (3): removed 6,981 -> 56,355 kept
+After de-duplication:               removed 225 -> 56,130 kept
+After quality filter:               removed 43,370 -> 12,760 kept
+Per-class quality keep rate:
+  депрессия                     : kept 4,409/33,324  (13.2%)
+  тревожное р-во                : kept 3,078/9,015  (34.1%)
+  ОКР                           : kept 2,317/4,848  (47.8%)
+  ПРЛ                           : kept 1,877/4,582  (41.0%)
+  БАР                           : kept   986/2,581  (38.2%)
+  шизофрения                    : kept    93/1,780  (5.2%)
+
+Word count stats after processing:
+count    12760.000000
+mean        50.768417
+std         67.872347
+min          3.000000
+25%         17.000000
+50%         30.000000
+75%         56.000000
+max        751.000000
+
+=== 5 random preprocessed samples ===
+
+  [tag: тревожное р-во]
+  RAW:    Месяц назад были почечные колики у меня впервые, проходила обследование. Это все меня и подкосило, очень переживала. И в
+  TOKENS: ['месяц', 'назад', 'почечн', 'колик', 'вперв', 'проход', 'обследован', 'подкос', 'пережива', 'обостр', 'тревожн', 'происход', 'камен', 'знат', 'вырва', 'хотет', 'дума', 'мо', 'эмоц', 'груд', 'пыта', 'сдержива']
+
+  [tag: тревожное р-во]
+  RAW:    Что для Вас сейчас паническая атака?Нежелательно это означает, что приведёт к плохим последствиям? Или означает, что оче
+  TOKENS: ['паническ', 'атак', 'нежелательн', 'означа', 'привест', 'плох', 'последств', 'означа', 'хотет']
+
+  [tag: ОКР]
+  RAW:    Пост Ковид? Нервное и/или психологическое истощение?  Что мешает действовать по всем фронтам? Назначьте дни обращения к 
+  TOKENS: ['ковид', 'нервн', 'психологическ', 'истощен', 'меша', 'действова', 'ве', 'фронт', 'назнач', 'ден', 'обращен', 'терапевт', 'невролог', 'психиатр', 'иска', 'психотерапевт', 'моч', 'активизирова', 'знач', 'пок', 'ещ', 'ресурс', 'тел', 'работ', 'надпочечник', 'митохондр', 'работа', 'пищеварен', 'гипоацидн', 'проблемн', 'желчн', 'текущ', 'кишечник', 'запор', 'микробиот', 'смест', 'сторон', 'патоген', 'желез', 'причин', 'усваива', 'дат', 'кофактор', 'работа', 'усвоен', 'работа', 'втор', 'фаз', 'детоксификац', 'печен', 'желчеотток', 'облегч', 'убра', 'мигрен', 'дат', 'магн', 'хорош', 'доз', 'постоянк', 'сладк', 'фрукт', 'печен', 'нагружа', 'зависет', 'цикл', 'эстрогендоминирован', 'признак', 'гипотериоз', 'морепродукт', 'йодирова', 'сол', 'част', 'стол', 'наш', 'прям', 'вынужда', 'вникнут', 'сво', 'здоров', 'иммунитет', 'трат', 'анализ', 'восполнен', 'дефиц', 'отлаживан', 'физическ', 'процесс', 'цикл', 'отказа', 'лишн', 'вредн', 'порожн', 'обрат', 'вниман', 'истин', 'цен', 'нужн', 'потихоньк', 'двига', 'направлен', 'благ']
+
+  [tag: депрессия]
+  RAW:    Я думала об этом варианте, но с учётом того, как часто он просыпается ночью, точнее практически не отлипает, и днем у на
+  TOKENS: ['дума', 'вариант', 'учет', 'част', 'просыпа', 'ноч', 'точн', 'практическ', 'отлипа', 'ден', 'требован', 'кормлен', 'ест', 'немн', 'част', 'кормлен', 'ищ', 'ложечк', 'удовлетворен', 'сосат', 'рефлекс', 'затруднительн', 'боя', 'действ', 'препарат', 'ноч', 'сложн', 'просыпа', 'дела', 'либ', 'прошл', 'ужасн', 'сонлив', 'кругл', 'сутк', 'при']
+
+  [tag: депрессия]
+  RAW:    психолог не поможет при депрессии, кроме совета сходить к психиатру
+  TOKENS: ['помоч', 'депресс', 'кром', 'совет', 'сход', 'психиатр']
+================================================================
+
+Class distribution after preprocessing:
+tag
+депрессия         4409
+тревожное р-во    3078
+ОКР               2317
+ПРЛ               1877
+БАР                986
+шизофрения          93
+
+[3/6] Selecting fixated test set (5000 samples)...
+Fixated test set: 5,000 samples
+Initial train set: 7,760 samples
+
+Fixated test set class distribution:
+tag
+депрессия         1739
+тревожное р-во    1180
+ОКР                926
+ПРЛ                742
+БАР                379
+шизофрения          34
+
+Initial train set class distribution:
+tag
+депрессия         2670
+тревожное р-во    1898
+ОКР               1391
+ПРЛ               1135
+БАР                607
+шизофрения          59
+
+Training data: 7,760 rows, 6 classes
+
+[AUGMENT] Loading augmented data from augmented_data.csv...
+Augmented data shape: (11805, 2)
+Preprocessing augmented data...
+After min-words filter (3): removed 0 -> 11,805 kept
+After de-duplication:               removed 0 -> 11,805 kept
+After quality filter:               removed 2,368 -> 9,437 kept
+Per-class quality keep rate:
+  шизофрения                    : kept 1,227/2,000  (61.4%)
+  БАР                           : kept 1,929/1,995  (96.7%)
+  тревожное р-во                : kept 1,370/1,990  (68.8%)
+  ОКР                           : kept 1,854/1,985  (93.4%)
+  депрессия                     : kept 1,293/1,940  (66.6%)
+  ПРЛ                           : kept 1,764/1,895  (93.1%)
+After cleaning & preprocessing augmented data: 9,437 rows
+Augmented data class distribution:
+tag
+БАР               1929
+ОКР               1854
+ПРЛ               1764
+тревожное р-во    1370
+депрессия         1293
+шизофрения        1227
+
+Combined training data: 17,197 rows (original: 7,760 + augmented: 9,437)
+
+[DOWNSAMPLE] Downsampling training set to max 5000 per class...
+Current training set class distribution:
+tag
+депрессия         3963
+тревожное р-во    3268
+ОКР               3245
+ПРЛ               2899
+БАР               2536
+шизофрения        1286
+  Class 'ОКР': 3245 (no downsampling needed)
+  Class 'БАР': 2536 (no downsampling needed)
+  Class 'тревожное р-во': 3268 (no downsampling needed)
+  Class 'ПРЛ': 2899 (no downsampling needed)
+  Class 'шизофрения': 1286 (no downsampling needed)
+  Class 'депрессия': 3963 (no downsampling needed)
+
+Downsampled training set: 17,197 samples
+Class distribution after downsampling:
+tag
+депрессия         3963
+тревожное р-во    3268
+ОКР               3245
+ПРЛ               2899
+БАР               2536
+шизофрения        1286
+
+[UPSAMPLE] Upsampling training set to min 3000 per class...
+Current training set class distribution:
+tag
+депрессия         3963
+тревожное р-во    3268
+ОКР               3245
+ПРЛ               2899
+БАР               2536
+шизофрения        1286
+  Upsampling class 'ПРЛ': 2899 -> 3000 (+101)
+  Class 'ОКР': 3245 (no upsampling needed)
+  Class 'тревожное р-во': 3268 (no upsampling needed)
+  Upsampling class 'БАР': 2536 -> 3000 (+464)
+  Class 'депрессия': 3963 (no upsampling needed)
+  Upsampling class 'шизофрения': 1286 -> 3000 (+1714)
+
+Upsampled training set: 19,476 samples
+Final training set class distribution:
+tag
+депрессия         3963
+тревожное р-во    3268
+ОКР               3245
+шизофрения        3000
+ПРЛ               3000
+БАР               3000
+
+Final train set: 19,476 samples
+Final test set: 5,000 samples
+Classes (6): ['БАР', 'ОКР', 'ПРЛ', 'депрессия', 'тревожное р-во', 'шизофрения']
+Train class counts: {'БАР': np.int64(3000), 'ОКР': np.int64(3245), 'ПРЛ': np.int64(3000), 'депрессия': np.int64(3963), 'тревожное р-во': np.int64(3268), 'шизофрения': np.int64(3000)}
+Test  class counts: {'БАР': np.int64(379), 'ОКР': np.int64(926), 'ПРЛ': np.int64(742), 'депрессия': np.int64(1739), 'тревожное р-во': np.int64(1180), 'шизофрения': np.int64(34)}
+
+[5/6] Extracting TF-IDF features...
+TF-IDF matrix -- train: (19476, 50000)  |  test: (5000, 50000)
+Vocabulary size: 50,000
+
+[6/6] Training classifiers and evaluating...
+  LinearSVC  C=0.1                    | F1=0.7256  Acc=0.7986
+  LinearSVC  C=0.2                    | F1=0.7340  Acc=0.8040
+  LinearSVC  C=0.3                    | F1=0.7450  Acc=0.8088
+  LinearSVC  C=0.5                    | F1=0.7519  Acc=0.8110
+  LinearSVC  C=1.0                    | F1=0.7376  Acc=0.8084
+  LinearSVC  C=1.5                    | F1=0.7357  Acc=0.8062
+  LinearSVC  C=2.0                    | F1=0.7294  Acc=0.8032
+  LinearSVC  C=3.0                    | F1=0.7234  Acc=0.8008
+
+================================================================
+BEST MODEL: LinearSVC  C=0.5
+================================================================
+Accuracy:      0.8110  (81.10%)
+F1 (macro):    0.7519
+F1 (weighted): 0.8060
+
+=== Per-class report ===
+                precision    recall  f1-score   support
+
+           БАР     0.7228    0.5092    0.5975       379
+           ОКР     0.7668    0.6782    0.7198       926
+           ПРЛ     0.7534    0.7453    0.7493       742
+     депрессия     0.8552    0.9241    0.8883      1739
+тревожное р-во     0.8270    0.8915    0.8581      1180
+    шизофрения     0.7586    0.6471    0.6984        34
+
+      accuracy                         0.8110      5000
+     macro avg     0.7807    0.7326    0.7519      5000
+  weighted avg     0.8064    0.8110    0.8060      5000
+
+
+=== All Results Summary (sorted by F1 macro) ===
+  F1=0.7519  Acc=0.8110  LinearSVC  C=0.5
+  F1=0.7450  Acc=0.8088  LinearSVC  C=0.3
+  F1=0.7376  Acc=0.8084  LinearSVC  C=1.0
+  F1=0.7357  Acc=0.8062  LinearSVC  C=1.5
+  F1=0.7340  Acc=0.8040  LinearSVC  C=0.2
+  F1=0.7294  Acc=0.8032  LinearSVC  C=2.0
+  F1=0.7256  Acc=0.7986  LinearSVC  C=0.1
+  F1=0.7234  Acc=0.8008  LinearSVC  C=3.0

@@ -7,5 +7,5 @@ __pycache__/
 .bert_ft_out/
 agent/
 logs/
-*.log
+error.log
 .DS_store
