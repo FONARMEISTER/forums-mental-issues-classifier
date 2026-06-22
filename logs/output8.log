@@ -1,0 +1,82 @@
+============================================================
+MENTAL HEALTH CLASSIFICATION v13 (fine-tuned rubert-tiny2)
+Device: mps
+============================================================
+
+[1/5] Loading data...
+Raw: 66,459 rows, 9 classes
+After dropping ambiguous classes: 63,336 rows, 6 classes
+After min-words filter (< 7 words): 53,766 (dropped 9,570)
+tag
+депрессия         31884
+тревожное р-во     8738
+ОКР                4642
+ПРЛ                4373
+БАР                2431
+шизофрения         1698
+
+[2/5] Per-class cap = 5000; 80/20 stratified split...
+After capping: 23,144 samples  (≥ 2500 ✔)
+tag
+депрессия         5000
+тревожное р-во    5000
+ОКР               4642
+ПРЛ               4373
+БАР               2431
+шизофрения        1698
+Classes (6): ['БАР', 'ОКР', 'ПРЛ', 'депрессия', 'тревожное р-во', 'шизофрения']
+Train: 18,515 | Test: 4,629
+
+[3/5] Loading tokenizer & model: cointegrated/rubert-tiny2
+Model params: 29.2 M
+Class weights: {'БАР': np.float64(1.587), 'ОКР': np.float64(0.831), 'ПРЛ': np.float64(0.882), 'депрессия': np.float64(0.771), 'тревожное р-во': np.float64(0.771), 'шизофрения': np.float64(2.272)}
+
+[4/5] Training 4 epochs (batch=32, lr=3e-05)...
+  epoch 1 step 100/579 loss=1.8089
+  epoch 1 step 200/579 loss=1.8029
+  epoch 1 step 300/579 loss=1.7866
+  epoch 1 step 400/579 loss=1.7561
+  epoch 1 step 500/579 loss=1.7291
+[epoch 1] train_loss=1.7103  test_acc=0.3873  test_f1_macro=0.3742  (71.7s)
+  epoch 2 step 100/579 loss=1.5270
+  epoch 2 step 200/579 loss=1.5160
+  epoch 2 step 300/579 loss=1.5018
+  epoch 2 step 400/579 loss=1.4941
+  epoch 2 step 500/579 loss=1.4837
+[epoch 2] train_loss=1.4778  test_acc=0.4310  test_f1_macro=0.4171  (70.8s)
+  epoch 3 step 100/579 loss=1.3771
+  epoch 3 step 200/579 loss=1.3692
+  epoch 3 step 300/579 loss=1.3669
+  epoch 3 step 400/579 loss=1.3658
+  epoch 3 step 500/579 loss=1.3636
+[epoch 3] train_loss=1.3570  test_acc=0.4357  test_f1_macro=0.4273  (71.1s)
+  epoch 4 step 100/579 loss=1.2839
+  epoch 4 step 200/579 loss=1.2905
+  epoch 4 step 300/579 loss=1.2922
+  epoch 4 step 400/579 loss=1.2886
+  epoch 4 step 500/579 loss=1.2883
+[epoch 4] train_loss=1.2891  test_acc=0.4500  test_f1_macro=0.4416  (71.0s)
+
+[5/5] Final report (best epoch by macro-F1)
+============================================================
+Accuracy:      0.4500  (45.00%)
+F1 (macro):    0.4416
+F1 (weighted): 0.4508
+
+=== Per-class report ===
+                precision    recall  f1-score   support
+
+           БАР     0.3003    0.3560    0.3258       486
+           ОКР     0.5593    0.4418    0.4937       928
+           ПРЛ     0.4691    0.4857    0.4773       875
+     депрессия     0.4044    0.3340    0.3658      1000
+тревожное р-во     0.5483    0.5170    0.5322      1000
+    шизофрения     0.3473    0.6588    0.4548       340
+
+      accuracy                         0.4500      4629
+     macro avg     0.4381    0.4656    0.4416      4629
+  weighted avg     0.4636    0.4500    0.4508      4629
+
+============================================================
+❌ TARGET NOT MET:  F1 macro = 0.4416 < 0.6
+============================================================

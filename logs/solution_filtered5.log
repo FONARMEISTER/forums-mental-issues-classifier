@@ -1,0 +1,113 @@
+================================================================
+MENTAL HEALTH CLASSIFICATION v15 (80/20 split)
+Device:          mps
+Embedding model: cointegrated/rubert-tiny2-cedr-emotion-detection
+================================================================
+
+[1/5] Loading & filtering data...
+Raw: 31,402 rows, 9 classes
+Dropped ambiguous classes: 252 → 31,150 rows, 7 classes
+After min-words (5): dropped 1,061 → 30,089 kept
+After de-dup:                dropped 108 → 29,981 kept
+
+Per-class counts:
+tag
+депрессия                16092
+тревожное р-во            5699
+ОКР                       2695
+ПРЛ                       2627
+БАР                       1313
+тревожное р-во/невроз      845
+шизофрения                 710
+
+[2/5] Per-class cap=15000 + 80/20 stratified split...
+After capping: 28,889 samples  (≥ 20000 ✔)
+tag
+депрессия                15000
+тревожное р-во            5699
+ОКР                       2695
+ПРЛ                       2627
+БАР                       1313
+тревожное р-во/невроз      845
+шизофрения                 710
+Classes (7): ['БАР', 'ОКР', 'ПРЛ', 'депрессия', 'тревожное р-во', 'тревожное р-во/невроз', 'шизофрения']
+Train class counts: {'БАР': np.int64(1050), 'ОКР': np.int64(2156), 'ПРЛ': np.int64(2102), 'депрессия': np.int64(12000), 'тревожное р-во': np.int64(4559), 'тревожное р-во/невроз': np.int64(676), 'шизофрения': np.int64(568)}
+Train: 23,111 | Test: 5,778
+Total used texts (train+test): 28,889  (≥ MIN_KEEP ✔)
+
+[3/5] Building TF-IDF features...
+TF-IDF combined: (23111, 158842)
+
+[4/5] Computing sentence embeddings with 'cointegrated/rubert-tiny2-cedr-emotion-detection' (cached)...
+Loading model: cointegrated/rubert-tiny2-cedr-emotion-detection
+  Encoding 23,111 train texts...
+  train embeddings: (23111, 312) (17.2s)
+  Encoding 5,778 test texts...
+  test embeddings: (5778, 312) (3.6s)
+Embeddings cached.
+Embeddings: train=(23111, 312), test=(5778, 312)
+Combined features: (23111, 159154)
+
+[5/5] Training base classifiers...
+  LR C=1.0: test F1=0.5080  test Acc=0.6021
+  LR C=2.0: test F1=0.5206  test Acc=0.6236
+  LR C=4.0: test F1=0.5283  test Acc=0.6395
+  CalSVC C=0.1: test F1=0.5024  test Acc=0.6847
+  CalSVC C=0.3: test F1=0.5148  test Acc=0.6892
+  CalSVC C=0.5: test F1=0.5094  test Acc=0.6867
+  CalSVC C=1.0: test F1=0.5021  test Acc=0.6838
+  CalSVC C=2.0: test F1=0.4991  test Acc=0.6807
+
+Probability-averaging ensembles:
+
+Top-2: ['LR C=4.0', 'LR C=2.0']
+  ENS top2: test F1=0.5268  Acc=0.6341
+
+Top-3: ['LR C=4.0', 'LR C=2.0', 'CalSVC C=0.3']
+  ENS top3: test F1=0.5450  Acc=0.6661
+
+Top-4: ['LR C=4.0', 'LR C=2.0', 'CalSVC C=0.3', 'CalSVC C=0.5']
+  ENS top4: test F1=0.5488  Acc=0.6791
+
+Top-5: ['LR C=4.0', 'LR C=2.0', 'CalSVC C=0.3', 'CalSVC C=0.5', 'LR C=1.0']
+  ENS top5: test F1=0.5458  Acc=0.6706
+
+================================================================
+BEST MODEL: ENS top4
+================================================================
+Accuracy:      0.6791  (67.91%)
+F1 (macro):    0.5488
+F1 (weighted): 0.6679
+
+=== Per-class report ===
+                       precision    recall  f1-score   support
+
+                  БАР     0.5789    0.3346    0.4241       263
+                  ОКР     0.6607    0.5455    0.5976       539
+                  ПРЛ     0.6061    0.4571    0.5212       525
+            депрессия     0.7165    0.8350    0.7712      3000
+       тревожное р-во     0.6352    0.5912    0.6124      1140
+тревожное р-во/невроз     0.4952    0.3077    0.3796       169
+           шизофрения     0.5772    0.5000    0.5358       142
+
+             accuracy                         0.6791      5778
+            macro avg     0.6100    0.5102    0.5488      5778
+         weighted avg     0.6691    0.6791    0.6679      5778
+
+================================================================
+❌ TARGET NOT MET:  F1 macro = 0.5488 < 0.6
+================================================================
+
+=== All Results Summary ===
+  0.5488  ENS top4
+  0.5458  ENS top5
+  0.5450  ENS top3
+  0.5283  LR C=4.0
+  0.5268  ENS top2
+  0.5206  LR C=2.0
+  0.5148  CalSVC C=0.3
+  0.5094  CalSVC C=0.5
+  0.5080  LR C=1.0
+  0.5024  CalSVC C=0.1
+  0.5021  CalSVC C=1.0
+  0.4991  CalSVC C=2.0

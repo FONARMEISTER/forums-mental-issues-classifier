@@ -22,3 +22,5 @@
 `bert.log` - логи запуска `bert_filtered_dataset.py`
 
 `tfidf.log` - логи запуска `tfidf_raw_dataset.py`
+
+`logs/` - логи предыдущих запусков

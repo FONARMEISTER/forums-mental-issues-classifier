@@ -1,0 +1,111 @@
+================================================================
+MENTAL HEALTH CLASSIFICATION v16 (SVM/MLP × TF-IDF/BERT/combined + BERT-FT)
+Device:          mps
+Embedding model: ai-forever/ruRoberta-large
+================================================================
+
+[1/5] Loading & filtering data...
+Raw: 37,024 rows, 9 classes
+Dropped ambiguous classes: 1,325 → 35,699 rows, 6 classes
+After min-words (7): dropped 3,274 → 32,425 kept
+After de-dup:                dropped 88 → 32,337 kept
+
+Per-class counts:
+tag
+депрессия         18013
+тревожное р-во     6111
+ОКР                3063
+ПРЛ                2861
+БАР                1423
+шизофрения          866
+
+[2/5] Per-class cap=12000 + 80/20 stratified split + train-only augmentation...
+After capping: 26,324 samples  
+tag
+депрессия         12000
+тревожное р-во     6111
+ОКР                3063
+ПРЛ                2861
+БАР                1423
+шизофрения          866
+Classes (6): ['БАР', 'ОКР', 'ПРЛ', 'депрессия', 'тревожное р-во', 'шизофрения']
+Train class counts: {'БАР': np.int64(1138), 'ОКР': np.int64(2450), 'ПРЛ': np.int64(2289), 'депрессия': np.int64(9600), 'тревожное р-во': np.int64(4889), 'шизофрения': np.int64(693)}
+
+Loading train-only augmented data: augmented_data_progress.csv
+Augmented raw: 11,805 rows, 6 classes
+Augmented dropped ambiguous classes: 0 → 11,805 rows
+Augmented after min-words (7): dropped 0 → 11,805 kept
+Augmented after de-dup:                dropped 0 → 11,805 kept
+Augmented train class counts: {'БАР': np.int64(1995), 'ОКР': np.int64(1985), 'ПРЛ': np.int64(1895), 'депрессия': np.int64(1940), 'тревожное р-во': np.int64(1990), 'шизофрения': np.int64(2000)}
+Merged 11,805 augmented rows into TRAIN only.
+Train: 32,864 (21,059 base + 11,805 augmented) | Test: 5,265 (base only)
+Final train class counts: {'БАР': np.int64(3133), 'ОКР': np.int64(4435), 'ПРЛ': np.int64(4184), 'депрессия': np.int64(11540), 'тревожное р-во': np.int64(6879), 'шизофрения': np.int64(2693)}
+Test class counts (evaluation set, no augmented data): {'БАР': np.int64(285), 'ОКР': np.int64(613), 'ПРЛ': np.int64(572), 'депрессия': np.int64(2400), 'тревожное р-во': np.int64(1222), 'шизофрения': np.int64(173)}
+Total base texts used for split/evaluation accounting: 26,324
+
+[3/5] Building TF-IDF features...
+TF-IDF (sparse): (32864, 182996)
+Reducing TF-IDF to dense 256-d via TruncatedSVD...
+TF-IDF (dense):  (32864, 256)  explained_var=0.172
+
+[4/5] Computing sentence embeddings with 'ai-forever/ruRoberta-large' (cached)...
+Loading model: ai-forever/ruRoberta-large
+  Encoding 32,864 train texts...
+  train embeddings: (32864, 1024) (460.9s)
+  Encoding 5,265 test texts...
+  test embeddings: (5265, 1024) (85.2s)
+Embeddings cached.
+Embeddings: train=(32864, 1024), test=(5265, 1024)
+Combined features: (32864, 1280)
+
+[5/5] Benchmarking SVM / MLP on TF-IDF / BERT / combined ...
+  SVM(C=0.1) @ tfidf             | F1=0.4695  Acc=0.5656  (2.3s)
+  SVM(C=0.3) @ tfidf             | F1=0.4690  Acc=0.5652  (2.3s)
+  SVM(C=1.0) @ tfidf             | F1=0.4690  Acc=0.5652  (2.4s)
+  SVM(C=3.0) @ tfidf             | F1=0.4690  Acc=0.5652  (2.5s)
+  SVM(C=10.0) @ tfidf            | F1=0.4689  Acc=0.5651  (2.5s)
+  MLP @ tfidf                    | F1=0.4700  Acc=0.6040  (1.5s)
+  SVM(C=0.1) @ bert              | F1=0.4889  Acc=0.5711  (52.3s)
+  SVM(C=0.3) @ bert              | F1=0.4896  Acc=0.5709  (50.3s)
+  SVM(C=1.0) @ bert              | F1=0.4887  Acc=0.5702  (51.5s)
+  SVM(C=3.0) @ bert              | F1=0.4888  Acc=0.5704  (56.0s)
+  SVM(C=10.0) @ bert             | F1=0.4894  Acc=0.5708  (68.5s)
+  MLP @ bert                     | F1=0.5105  Acc=0.6207  (3.4s)
+  SVM(C=0.1) @ combined          | F1=0.5226  Acc=0.5958  (64.6s)
+  SVM(C=0.3) @ combined          | F1=0.5232  Acc=0.5956  (66.2s)
+  SVM(C=1.0) @ combined          | F1=0.5224  Acc=0.5951  (73.7s)
+  SVM(C=3.0) @ combined          | F1=0.5211  Acc=0.5947  (77.0s)
+  SVM(C=10.0) @ combined         | F1=0.5214  Acc=0.5951  (86.5s)
+  MLP @ combined                 | F1=0.5316  Acc=0.6237  (3.3s)
+
+================================================================
+BEST MODEL: MLP @ combined
+================================================================
+Accuracy:      0.6237  (62.37%)
+F1 (macro):    0.5316
+F1 (weighted): 0.6168
+
+=== Per-class report ===
+                precision    recall  f1-score   support
+
+           БАР     0.4054    0.3158    0.3550       285
+           ОКР     0.5933    0.4878    0.5354       613
+           ПРЛ     0.5171    0.4493    0.4808       572
+     депрессия     0.6609    0.7521    0.7036      2400
+тревожное р-во     0.6359    0.6260    0.6309      1222
+    шизофрения     0.6296    0.3931    0.4840       173
+
+      accuracy                         0.6237      5265
+     macro avg     0.5737    0.5040    0.5316      5265
+  weighted avg     0.6168    0.6237    0.6168      5265
+
+================================================================
+❌ TARGET NOT MET:  F1 macro = 0.5316 < 0.6
+================================================================
+
+[+] Fine-tuning BERT end-to-end as a classifier...
+  Releasing embedding/classical-model memory before fine-tuning...
+  Memory cleanup done.
+  Fine-tune device: mps
+  Gradient checkpointing enabled.
+  Trainer device: mps

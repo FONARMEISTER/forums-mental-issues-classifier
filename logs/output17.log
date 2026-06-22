@@ -1,0 +1,34 @@
+================================================================
+MENTAL HEALTH CLASSIFICATION v15 (E5-large + bias tuning)
+Device: mps
+================================================================
+
+[1/6] Loading & filtering data...
+Raw: 66,459 rows, 9 classes
+Dropped ambiguous classes: 3,123 → 63,336 rows, 6 classes
+After min-words (15): dropped 33,652 → 29,684 kept
+After de-dup:                dropped 88 → 29,596 kept
+
+Per-class counts:
+tag
+депрессия         17137
+тревожное р-во     5088
+ОКР                2847
+ПРЛ                2344
+БАР                1237
+шизофрения          943
+
+[2/6] Per-class cap=100000 + 65/15/20 stratified split...
+After capping: 29,596 samples  (≥ 25000 ✔)
+tag
+депрессия         17137
+тревожное р-во     5088
+ОКР                2847
+ПРЛ                2344
+БАР                1237
+шизофрения          943
+Classes (6): ['БАР', 'ОКР', 'ПРЛ', 'депрессия', 'тревожное р-во', 'шизофрения']
+Balanced train per-class cap = 5000: train size 13,098
+Train class counts: {'БАР': np.int64(804), 'ОКР': np.int64(1851), 'ПРЛ': np.int64(1523), 'депрессия': np.int64(5000), 'тревожное р-во': np.int64(3307), 'шизофрения': np.int64(613)}
+Train: 13,098 | Val: 4,440 | Test: 5,920
+Total used texts (train+val+test): 23,458  (< 25000 ✘)

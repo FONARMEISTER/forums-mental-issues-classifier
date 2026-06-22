@@ -6,6 +6,5 @@ artifacts
 __pycache__/
 .bert_ft_out/
 agent/
-logs/
 error.log
 .DS_store

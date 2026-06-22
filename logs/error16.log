@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "/Users/ilyasar004/Documents/nlp/project/solution2.py", line 197, in <module>
+    assert n_used >= 25000, f"Need ≥ 25000 texts, have {n_used}"
+           ^^^^^^^^^^^^^^^
+AssertionError: Need ≥ 25000 texts, have 21151

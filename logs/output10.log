@@ -1,0 +1,104 @@
+================================================================
+MENTAL HEALTH CLASSIFICATION v15 (E5-large + bias tuning)
+Device: mps
+================================================================
+
+[1/6] Loading & filtering data...
+Raw: 66,459 rows, 9 classes
+Dropped ambiguous classes: 3,123 → 63,336 rows, 6 classes
+After min-words (15): dropped 33,652 → 29,684 kept
+After de-dup:                dropped 88 → 29,596 kept
+
+Per-class counts:
+tag
+депрессия         17137
+тревожное р-во     5088
+ОКР                2847
+ПРЛ                2344
+БАР                1237
+шизофрения          943
+
+[2/6] Per-class cap=3000 + 65/15/20 stratified split...
+After capping: 13,371 samples  (≥ 2500 ✔)
+tag
+тревожное р-во    3000
+депрессия         3000
+ОКР               2847
+ПРЛ               2344
+БАР               1237
+шизофрения         943
+Classes (6): ['БАР', 'ОКР', 'ПРЛ', 'депрессия', 'тревожное р-во', 'шизофрения']
+Train: 8,690 | Val: 2,006 | Test: 2,675
+
+[3/6] Building TF-IDF features...
+TF-IDF combined: (8690, 98494)
+
+[4/6] Computing E5-large sentence embeddings (cached)...
+Loading model: intfloat/multilingual-e5-large
+  Encoding 8,690 train texts...
+  train embeddings: (8690, 1024) (175.2s)
+  Encoding 2,006 val texts...
+  val embeddings: (2006, 1024) (41.4s)
+  Encoding 2,675 test texts...
+  test embeddings: (2675, 1024) (58.6s)
+Embeddings cached.
+Embeddings: train=(8690, 1024), val=(2006, 1024), test=(2675, 1024)
+Combined features: (8690, 99518)
+
+[5/6] Training base classifiers...
+  LR C=1.0: val F1=0.5815 | test F1=0.5834  test Acc=0.5892
+  LR C=2.0: val F1=0.5815 | test F1=0.5852  test Acc=0.5895
+  LR C=4.0: val F1=0.5777 | test F1=0.5825  test Acc=0.5858
+  CalSVC C=0.3: val F1=0.5959 | test F1=0.5932  test Acc=0.6007
+  CalSVC C=1.0: val F1=0.5860 | test F1=0.5838  test Acc=0.5918
+  CalSVC C=3.0: val F1=0.5799 | test F1=0.5793  test Acc=0.5850
+
+[6/6] Per-class log-bias tuning (coordinate-ascent on val macro-F1)...
+
+Tuned results per base model:
+  LR C=1.0  tuned: val F1=0.5920 | test F1=0.5953  Acc=0.5966  biases=[-0.4  0.3  0.   0.2  0.  -0.4]
+  LR C=2.0  tuned: val F1=0.5897 | test F1=0.5781  Acc=0.5817  biases=[ 0.1 -0.1  0.3  0.   0.   0. ]
+  LR C=4.0  tuned: val F1=0.5887 | test F1=0.5940  Acc=0.5955  biases=[ 0.3  0.3  0.2  0.6  0.1 -0.2]
+  CalSVC C=0.3  tuned: val F1=0.6026 | test F1=0.5909  Acc=0.5940  biases=[ 0.1  0.  -0.2  0.1 -0.3 -0.1]
+  CalSVC C=1.0  tuned: val F1=0.5971 | test F1=0.5807  Acc=0.5884  biases=[ 0.3  0.1 -0.2  0.1  0.   0. ]
+  CalSVC C=3.0  tuned: val F1=0.5950 | test F1=0.5759  Acc=0.5806  biases=[ 0.2  0.  -0.3  0.1  0.   0. ]
+
+Probability-averaging ensemble of top-2 base models:
+Top-2 base models: ['CalSVC C=0.3', 'CalSVC C=1.0']
+  ENSEMBLE raw   : test F1=0.5973  Acc=0.6052
+  ENSEMBLE tuned : val F1=0.6004 | test F1=0.5903  Acc=0.5884  biases=[ 0.2 -0.1 -0.2  0.2 -0.5  0. ]
+
+================================================================
+BEST MODEL: ENSEMBLE raw
+================================================================
+Accuracy:      0.6052  (60.52%)
+F1 (macro):    0.5973
+F1 (weighted): 0.6055
+
+=== Per-class report ===
+                precision    recall  f1-score   support
+
+           БАР     0.6353    0.4372    0.5180       247
+           ОКР     0.6254    0.6649    0.6446       570
+           ПРЛ     0.6497    0.5970    0.6222       469
+     депрессия     0.4847    0.5817    0.5288       600
+тревожное р-во     0.6717    0.6683    0.6700       600
+    шизофрения     0.6755    0.5397    0.6000       189
+
+      accuracy                         0.6052      2675
+     macro avg     0.6237    0.5815    0.5973      2675
+  weighted avg     0.6129    0.6052    0.6055      2675
+
+================================================================
+❌ TARGET NOT MET:  F1 macro = 0.5973 < 0.6
+================================================================
+
+=== All Results Summary ===
+  0.5973  ENSEMBLE raw
+  0.5953  LR C=1.0 (tuned)
+  0.5940  LR C=4.0 (tuned)
+  0.5909  CalSVC C=0.3 (tuned)
+  0.5903  ENSEMBLE (tuned)
+  0.5807  CalSVC C=1.0 (tuned)
+  0.5781  LR C=2.0 (tuned)
+  0.5759  CalSVC C=3.0 (tuned)

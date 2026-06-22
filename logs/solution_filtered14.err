@@ -1,0 +1,25 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/389 [00:00<?, ?it/s]Loading weights: 100%|██████████| 389/389 [00:00<00:00, 63624.41it/s]
+[1mRobertaForSequenceClassification LOAD REPORT[0m from: ai-forever/ruRoberta-large
+Key                             | Status     | 
+--------------------------------+------------+-
+lm_head.layer_norm.weight       | UNEXPECTED | 
+roberta.embeddings.position_ids | UNEXPECTED | 
+lm_head.decoder.bias            | UNEXPECTED | 
+lm_head.dense.weight            | UNEXPECTED | 
+lm_head.layer_norm.bias         | UNEXPECTED | 
+lm_head.decoder.weight          | UNEXPECTED | 
+lm_head.bias                    | UNEXPECTED | 
+lm_head.dense.bias              | UNEXPECTED | 
+classifier.dense.bias           | MISSING    | 
+classifier.out_proj.weight      | MISSING    | 
+classifier.out_proj.bias        | MISSING    | 
+classifier.dense.weight         | MISSING    | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+- MISSING:	those params were newly initialized because missing from the checkpoint. Consider training on your downstream task.
+warmup_ratio is deprecated and will be removed in v5.2. Use `warmup_steps` instead.
+The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'pad_token_id': 0}.
+  0%|          | 0/6162 [00:00<?, ?it/s]  0%|          | 1/6162 [00:02<4:29:36,  2.63s/it]  0%|          | 2/6162 [00:03<3:00:08,  1.75s/it]  0%|          | 3/6162 [00:05<2:47:57,  1.64s/it]  0%|          | 4/6162 [00:07<3:10:48,  1.86s/it]/opt/homebrew/Caskroom/miniconda/base/envs/dl/lib/python3.12/multiprocessing/resource_tracker.py:279: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '

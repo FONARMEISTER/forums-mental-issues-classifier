@@ -1,0 +1,107 @@
+================================================================
+MENTAL HEALTH CLASSIFICATION v15 (80/20 split)
+Device: mps
+================================================================
+
+[1/5] Loading & filtering data...
+Raw: 31,402 rows, 9 classes
+Dropped ambiguous classes: 252 → 31,150 rows, 7 classes
+After min-words (5): dropped 1,061 → 30,089 kept
+After de-dup:                dropped 108 → 29,981 kept
+
+Per-class counts:
+tag
+депрессия                16092
+тревожное р-во            5699
+ОКР                       2695
+ПРЛ                       2627
+БАР                       1313
+тревожное р-во/невроз      845
+шизофрения                 710
+
+[2/5] Per-class cap=15000 + 80/20 stratified split...
+After capping: 28,889 samples  (≥ 20000 ✔)
+tag
+депрессия                15000
+тревожное р-во            5699
+ОКР                       2695
+ПРЛ                       2627
+БАР                       1313
+тревожное р-во/невроз      845
+шизофрения                 710
+Classes (7): ['БАР', 'ОКР', 'ПРЛ', 'депрессия', 'тревожное р-во', 'тревожное р-во/невроз', 'шизофрения']
+Train class counts: {'БАР': np.int64(1050), 'ОКР': np.int64(2156), 'ПРЛ': np.int64(2102), 'депрессия': np.int64(12000), 'тревожное р-во': np.int64(4559), 'тревожное р-во/невроз': np.int64(676), 'шизофрения': np.int64(568)}
+Train: 23,111 | Test: 5,778
+Total used texts (train+test): 28,889  (≥ MIN_KEEP ✔)
+
+[3/5] Building TF-IDF features...
+TF-IDF combined: (23111, 158842)
+
+[4/5] Computing E5-large sentence embeddings (cached)...
+Loading cached embeddings...
+Embeddings: train=(23111, 1024), test=(5778, 1024)
+Combined features: (23111, 159866)
+
+[5/5] Training base classifiers...
+  LR C=1.0: test F1=0.5385  test Acc=0.6248
+  LR C=2.0: test F1=0.5519  test Acc=0.6419
+  LR C=4.0: test F1=0.5627  test Acc=0.6559
+  CalSVC C=0.1: test F1=0.5590  test Acc=0.7034
+  CalSVC C=0.3: test F1=0.5613  test Acc=0.7025
+  CalSVC C=0.5: test F1=0.5601  test Acc=0.7030
+  CalSVC C=1.0: test F1=0.5558  test Acc=0.7034
+  CalSVC C=2.0: test F1=0.5516  test Acc=0.7008
+
+Probability-averaging ensembles:
+
+Top-2: ['LR C=4.0', 'CalSVC C=0.3']
+  ENS top2: test F1=0.5856  Acc=0.6912
+
+Top-3: ['LR C=4.0', 'CalSVC C=0.3', 'CalSVC C=0.5']
+  ENS top3: test F1=0.5853  Acc=0.6983
+
+Top-4: ['LR C=4.0', 'CalSVC C=0.3', 'CalSVC C=0.5', 'CalSVC C=0.1']
+  ENS top4: test F1=0.5818  Acc=0.7023
+
+Top-5: ['LR C=4.0', 'CalSVC C=0.3', 'CalSVC C=0.5', 'CalSVC C=0.1', 'CalSVC C=1.0']
+  ENS top5: test F1=0.5779  Acc=0.7023
+
+================================================================
+BEST MODEL: ENS top2
+================================================================
+Accuracy:      0.6912  (69.12%)
+F1 (macro):    0.5856
+F1 (weighted): 0.6842
+
+=== Per-class report ===
+                       precision    recall  f1-score   support
+
+                  БАР     0.5978    0.4183    0.4922       263
+                  ОКР     0.6646    0.5881    0.6240       539
+                  ПРЛ     0.5944    0.4857    0.5346       525
+            депрессия     0.7360    0.8223    0.7768      3000
+       тревожное р-во     0.6525    0.6079    0.6294      1140
+тревожное р-во/невроз     0.4844    0.3669    0.4175       169
+           шизофрения     0.6164    0.6338    0.6250       142
+
+             accuracy                         0.6912      5778
+            macro avg     0.6209    0.5604    0.5856      5778
+         weighted avg     0.6834    0.6912    0.6842      5778
+
+================================================================
+❌ TARGET NOT MET:  F1 macro = 0.5856 < 0.6
+================================================================
+
+=== All Results Summary ===
+  0.5856  ENS top2
+  0.5853  ENS top3
+  0.5818  ENS top4
+  0.5779  ENS top5
+  0.5627  LR C=4.0
+  0.5613  CalSVC C=0.3
+  0.5601  CalSVC C=0.5
+  0.5590  CalSVC C=0.1
+  0.5558  CalSVC C=1.0
+  0.5519  LR C=2.0
+  0.5516  CalSVC C=2.0
+  0.5385  LR C=1.0

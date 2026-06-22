@@ -1,0 +1,119 @@
+================================================================
+MENTAL HEALTH CLASSIFICATION v16 (SVM/MLP × TF-IDF/BERT/combined + BERT-FT)
+Device:          mps
+Embedding model: intfloat/multilingual-e5-large
+================================================================
+
+[1/5] Loading & filtering data...
+Raw: 37,024 rows, 9 classes
+Dropped ambiguous classes: 1,325 → 35,699 rows, 6 classes
+After min-words (7): dropped 3,274 → 32,425 kept
+After de-dup:                dropped 88 → 32,337 kept
+
+Per-class counts:
+tag
+депрессия         18013
+тревожное р-во     6111
+ОКР                3063
+ПРЛ                2861
+БАР                1423
+шизофрения          866
+
+[2/5] Per-class cap=12000 + 80/20 stratified split...
+After capping: 26,324 samples  (≥ 20000 ✔)
+tag
+депрессия         12000
+тревожное р-во     6111
+ОКР                3063
+ПРЛ                2861
+БАР                1423
+шизофрения          866
+Classes (6): ['БАР', 'ОКР', 'ПРЛ', 'депрессия', 'тревожное р-во', 'шизофрения']
+Train class counts: {'БАР': np.int64(1138), 'ОКР': np.int64(2450), 'ПРЛ': np.int64(2289), 'депрессия': np.int64(9600), 'тревожное р-во': np.int64(4889), 'шизофрения': np.int64(693)}
+Train: 21,059 | Test: 5,265
+Total used texts (train+test): 26,324  (≥ MIN_KEEP ✔)
+
+[3/5] Building TF-IDF features...
+TF-IDF (sparse): (21059, 149533)
+Reducing TF-IDF to dense 256-d via TruncatedSVD...
+TF-IDF (dense):  (21059, 256)  explained_var=0.162
+
+[4/5] Computing sentence embeddings with 'intfloat/multilingual-e5-large' (cached)...
+Loading model: intfloat/multilingual-e5-large
+  Encoding 21,059 train texts...
+  train embeddings: (21059, 1024) (361.5s)
+  Encoding 5,265 test texts...
+  test embeddings: (5265, 1024) (102.0s)
+Embeddings cached.
+Embeddings: train=(21059, 1024), test=(5265, 1024)
+Combined features: (21059, 1280)
+
+[5/5] Benchmarking SVM / MLP on TF-IDF / BERT / combined ...
+  SVM(C=0.1) @ tfidf             | F1=0.4791  Acc=0.5605  (1.6s)
+  SVM(C=0.3) @ tfidf             | F1=0.4791  Acc=0.5605  (1.6s)
+  SVM(C=1.0) @ tfidf             | F1=0.4791  Acc=0.5605  (1.6s)
+  SVM(C=3.0) @ tfidf             | F1=0.4791  Acc=0.5605  (1.6s)
+  SVM(C=10.0) @ tfidf            | F1=0.4791  Acc=0.5605  (1.6s)
+  MLP @ tfidf                    | F1=0.4794  Acc=0.5964  (1.0s)
+  SVM(C=0.1) @ bert              | F1=0.5184  Acc=0.5839  (55.7s)
+  SVM(C=0.3) @ bert              | F1=0.5175  Acc=0.5821  (57.9s)
+  SVM(C=1.0) @ bert              | F1=0.5178  Acc=0.5821  (66.5s)
+  SVM(C=3.0) @ bert              | F1=0.5168  Acc=0.5818  (76.4s)
+  SVM(C=10.0) @ bert             | F1=0.5169  Acc=0.5820  (79.1s)
+  MLP @ bert                     | F1=0.5656  Acc=0.6558  (1.7s)
+  SVM(C=0.1) @ combined          | F1=0.5323  Acc=0.5937  (64.7s)
+  SVM(C=0.3) @ combined          | F1=0.5267  Acc=0.5909  (70.1s)
+  SVM(C=1.0) @ combined          | F1=0.5228  Acc=0.5890  (91.5s)
+  SVM(C=3.0) @ combined          | F1=0.5163  Acc=0.5863  (165.4s)
+  SVM(C=10.0) @ combined         | F1=0.5140  Acc=0.5850  (339.8s)
+  MLP @ combined                 | F1=0.5824  Acc=0.6536  (3.8s)
+
+================================================================
+BEST MODEL: MLP @ combined
+================================================================
+Accuracy:      0.6536  (65.36%)
+F1 (macro):    0.5824
+F1 (weighted): 0.6459
+
+=== Per-class report ===
+                precision    recall  f1-score   support
+
+           БАР     0.5450    0.3825    0.4495       285
+           ОКР     0.6068    0.5563    0.5804       613
+           ПРЛ     0.6000    0.4353    0.5046       572
+     депрессия     0.6727    0.7946    0.7286      2400
+тревожное р-во     0.6685    0.6056    0.6355      1222
+    шизофрения     0.6507    0.5491    0.5956       173
+
+      accuracy                         0.6536      5265
+     macro avg     0.6239    0.5539    0.5824      5265
+  weighted avg     0.6485    0.6536    0.6459      5265
+
+================================================================
+❌ TARGET NOT MET:  F1 macro = 0.5824 < 0.6
+================================================================
+
+[+] Fine-tuning BERT end-to-end as a classifier...
+  Fine-tune device: mps
+{'loss': '1.616', 'grad_norm': '9.112', 'learning_rate': '5e-06', 'epoch': '0.07593'}
+  [WARN] BERT fine-tuning skipped: RuntimeError: MPS backend out of memory (MPS allocated: 20.91 GiB, other allocations: 40.24 GiB, max allowed: 61.20 GiB). Tried to allocate 64.00 MiB on private pool. Use PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0 to disable upper limit for memory allocations (may cause system failure).
+
+=== All Results Summary (F1 macro, Acc) ===
+  F1=0.5824  Acc=0.6536  MLP @ combined
+  F1=0.5656  Acc=0.6558  MLP @ bert
+  F1=0.5323  Acc=0.5937  SVM(C=0.1) @ combined
+  F1=0.5267  Acc=0.5909  SVM(C=0.3) @ combined
+  F1=0.5228  Acc=0.5890  SVM(C=1.0) @ combined
+  F1=0.5184  Acc=0.5839  SVM(C=0.1) @ bert
+  F1=0.5178  Acc=0.5821  SVM(C=1.0) @ bert
+  F1=0.5175  Acc=0.5821  SVM(C=0.3) @ bert
+  F1=0.5169  Acc=0.5820  SVM(C=10.0) @ bert
+  F1=0.5168  Acc=0.5818  SVM(C=3.0) @ bert
+  F1=0.5163  Acc=0.5863  SVM(C=3.0) @ combined
+  F1=0.5140  Acc=0.5850  SVM(C=10.0) @ combined
+  F1=0.4794  Acc=0.5964  MLP @ tfidf
+  F1=0.4791  Acc=0.5605  SVM(C=0.1) @ tfidf
+  F1=0.4791  Acc=0.5605  SVM(C=0.3) @ tfidf
+  F1=0.4791  Acc=0.5605  SVM(C=1.0) @ tfidf
+  F1=0.4791  Acc=0.5605  SVM(C=3.0) @ tfidf
+  F1=0.4791  Acc=0.5605  SVM(C=10.0) @ tfidf

@@ -1,0 +1,136 @@
+============================================================
+MENTAL HEALTH CLASSIFICATION v11
+============================================================
+
+[1/6] Loading data...
+Raw dataset: 66,459 samples, 9 classes
+
+[2/6] Dropping ambiguous classes...
+Dropped 3,123 samples → 63,336 remaining, 6 classes
+tag
+депрессия         37639
+тревожное р-во    10069
+ОКР                5393
+ПРЛ                5219
+БАР                2961
+шизофрения         2055
+
+Cleaning texts + removing stopwords...
+Removed 16,995 texts with < 7 words → 46,341 remaining
+tag
+депрессия         27354
+тревожное р-во     7713
+ОКР                4102
+ПРЛ                3696
+БАР                2011
+шизофрения         1465
+
+[3/6] Applying class caps + 80/20 stratified split...
+After capping: 28,987 samples
+tag
+депрессия         10000
+тревожное р-во     7713
+ОКР                4102
+ПРЛ                3696
+БАР                2011
+шизофрения         1465
+
+Train: 23,189 | Test: 5,798
+
+Train distribution:
+депрессия         8000
+тревожное р-во    6170
+ОКР               3281
+ПРЛ               2957
+БАР               1609
+шизофрения        1172
+
+Test distribution:
+депрессия         2000
+тревожное р-во    1543
+ОКР                821
+ПРЛ                739
+БАР                402
+шизофрения         293
+
+[4/6] Building TF-IDF features...
+Word TF-IDF: (23189, 112314)
+Char TF-IDF: (23189, 131062)
+Combined TF-IDF: (23189, 243376)
+
+[5/6] Computing sentence embeddings...
+Using device: mps
+Loading model: ai-forever/ru-en-RoSBERTa
+Encoding 23,189 train texts...
+Train embeddings: (23189, 1024) (236.4s)
+Encoding 5,798 test texts...
+Test embeddings: (5798, 1024) (60.5s)
+Embeddings cached to disk.
+Combined features: (23189, 244400)
+
+[6/6] Training classifiers...
+
+--- A. LinearSVC on combined TF-IDF + Embeddings ---
+  LinearSVC combined C=0.05: Acc=0.5681  F1=0.5261
+  LinearSVC combined C=0.1: Acc=0.5802  F1=0.5430
+  LinearSVC combined C=0.2: Acc=0.5890  F1=0.5514
+  LinearSVC combined C=0.5: Acc=0.5849  F1=0.5442
+
+--- B. LinearSVC on TF-IDF only ---
+  LinearSVC TF-IDF C=0.05: Acc=0.5680  F1=0.5258
+  LinearSVC TF-IDF C=0.1: Acc=0.5755  F1=0.5327
+  LinearSVC TF-IDF C=0.2: Acc=0.5812  F1=0.5402
+
+--- C. Decision Tree on TF-IDF ---
+  DecisionTree depth=None leaf=1: Acc=0.3951  F1=0.3483
+  DecisionTree depth=None leaf=5: Acc=0.3687  F1=0.3353
+  DecisionTree depth=30 leaf=1: Acc=0.4405  F1=0.3625
+  DecisionTree depth=30 leaf=5: Acc=0.4339  F1=0.3594
+  DecisionTree depth=50 leaf=1: Acc=0.4515  F1=0.3706
+  DecisionTree depth=50 leaf=5: Acc=0.4314  F1=0.3588
+
+--- D. Random Forest on TF-IDF ---
+  RandomForest n=200: Acc=0.5252  F1=0.4182
+  RandomForest n=500: Acc=0.5288  F1=0.4251
+
+============================================================
+BEST MODEL: LinearSVC combined C=0.2
+============================================================
+Accuracy:      0.5890  (58.90%)
+F1 (macro):    0.5514
+F1 (weighted): 0.5890
+
+=== Per-class Report ===
+                precision    recall  f1-score   support
+
+           БАР     0.4752    0.4055    0.4376       402
+           ОКР     0.5888    0.5493    0.5684       821
+           ПРЛ     0.5121    0.5453    0.5282       739
+     депрессия     0.6084    0.6270    0.6176      2000
+тревожное р-во     0.6590    0.6338    0.6462      1543
+    шизофрения     0.4650    0.5666    0.5108       293
+
+      accuracy                         0.5890      5798
+     macro avg     0.5514    0.5546    0.5514      5798
+  weighted avg     0.5904    0.5890    0.5890      5798
+
+============================================================
+❌ TARGET NOT MET: F1 macro = 0.5514 < 0.6
+============================================================
+
+=== All Results Summary ===
+  0.5514  LinearSVC combined C=0.2
+  0.5442  LinearSVC combined C=0.5
+  0.5430  LinearSVC combined C=0.1
+  0.5402  LinearSVC TF-IDF C=0.2
+  0.5327  LinearSVC TF-IDF C=0.1
+  0.5261  LinearSVC combined C=0.05
+  0.5258  LinearSVC TF-IDF C=0.05
+  0.4251  RandomForest n=500
+  0.4182  RandomForest n=200
+  0.3706  DecisionTree depth=50 leaf=1
+  0.3625  DecisionTree depth=30 leaf=1
+  0.3594  DecisionTree depth=30 leaf=5
+  0.3588  DecisionTree depth=50 leaf=5
+  0.3483  DecisionTree depth=None leaf=1
+  0.3353  DecisionTree depth=None leaf=5

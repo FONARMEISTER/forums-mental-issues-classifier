@@ -1,0 +1,112 @@
+================================================================
+MENTAL HEALTH CLASSIFICATION v15 (80/20 split)
+Device: mps
+================================================================
+
+[1/5] Loading & filtering data...
+Raw: 31,402 rows, 9 classes
+Dropped ambiguous classes: 252 → 31,150 rows, 7 classes
+After min-words (5): dropped 1,061 → 30,089 kept
+After de-dup:                dropped 108 → 29,981 kept
+
+Per-class counts:
+tag
+депрессия                16092
+тревожное р-во            5699
+ОКР                       2695
+ПРЛ                       2627
+БАР                       1313
+тревожное р-во/невроз      845
+шизофрения                 710
+
+[2/5] Per-class cap=10000 + 80/20 stratified split...
+After capping: 23,889 samples  (≥ 20000 ✔)
+tag
+депрессия                10000
+тревожное р-во            5699
+ОКР                       2695
+ПРЛ                       2627
+БАР                       1313
+тревожное р-во/невроз      845
+шизофрения                 710
+Classes (7): ['БАР', 'ОКР', 'ПРЛ', 'депрессия', 'тревожное р-во', 'тревожное р-во/невроз', 'шизофрения']
+Train class counts: {'БАР': np.int64(1050), 'ОКР': np.int64(2156), 'ПРЛ': np.int64(2102), 'депрессия': np.int64(8000), 'тревожное р-во': np.int64(4559), 'тревожное р-во/невроз': np.int64(676), 'шизофрения': np.int64(568)}
+Train: 19,111 | Test: 4,778
+Total used texts (train+test): 23,889  (≥ MIN_KEEP ✔)
+
+[3/5] Building TF-IDF features...
+TF-IDF combined: (19111, 140575)
+
+[4/5] Computing E5-large sentence embeddings (cached)...
+Loading model: intfloat/multilingual-e5-large
+  Encoding 19,111 train texts...
+  train embeddings: (19111, 1024) (305.5s)
+  Encoding 4,778 test texts...
+  test embeddings: (4778, 1024) (78.6s)
+Embeddings cached.
+Embeddings: train=(19111, 1024), test=(4778, 1024)
+Combined features: (19111, 141599)
+
+[5/5] Training base classifiers...
+  LR C=1.0: test F1=0.5599  test Acc=0.6159
+  LR C=2.0: test F1=0.5711  test Acc=0.6304
+  LR C=4.0: test F1=0.5773  test Acc=0.6362
+  CalSVC C=0.1: test F1=0.5744  test Acc=0.6656
+  CalSVC C=0.3: test F1=0.5725  test Acc=0.6674
+  CalSVC C=0.5: test F1=0.5724  test Acc=0.6689
+  CalSVC C=1.0: test F1=0.5675  test Acc=0.6666
+  CalSVC C=2.0: test F1=0.5663  test Acc=0.6641
+
+Probability-averaging ensembles:
+
+Top-2: ['LR C=4.0', 'CalSVC C=0.1']
+  ENS top2: test F1=0.5844  Acc=0.6559
+
+Top-3: ['LR C=4.0', 'CalSVC C=0.1', 'CalSVC C=0.3']
+  ENS top3: test F1=0.5846  Acc=0.6593
+
+Top-4: ['LR C=4.0', 'CalSVC C=0.1', 'CalSVC C=0.3', 'CalSVC C=0.5']
+  ENS top4: test F1=0.5803  Acc=0.6601
+
+Top-5: ['LR C=4.0', 'CalSVC C=0.1', 'CalSVC C=0.3', 'CalSVC C=0.5', 'LR C=2.0']
+  ENS top5: test F1=0.5839  Acc=0.6568
+
+================================================================
+BEST MODEL: ENS top3
+================================================================
+Accuracy:      0.6593  (65.93%)
+F1 (macro):    0.5846
+F1 (weighted): 0.6508
+
+=== Per-class report ===
+                       precision    recall  f1-score   support
+
+                  БАР     0.6667    0.3650    0.4717       263
+                  ОКР     0.7076    0.5881    0.6424       539
+                  ПРЛ     0.6165    0.4838    0.5422       525
+            депрессия     0.6496    0.8065    0.7196      2000
+       тревожное р-во     0.6816    0.6421    0.6612      1140
+тревожное р-во/невроз     0.5596    0.3609    0.4388       169
+           шизофрения     0.7130    0.5423    0.6160       142
+
+             accuracy                         0.6593      4778
+            macro avg     0.6564    0.5413    0.5846      4778
+         weighted avg     0.6598    0.6593    0.6508      4778
+
+================================================================
+❌ TARGET NOT MET:  F1 macro = 0.5846 < 0.6
+================================================================
+
+=== All Results Summary ===
+  0.5846  ENS top3
+  0.5844  ENS top2
+  0.5839  ENS top5
+  0.5803  ENS top4
+  0.5773  LR C=4.0
+  0.5744  CalSVC C=0.1
+  0.5725  CalSVC C=0.3
+  0.5724  CalSVC C=0.5
+  0.5711  LR C=2.0
+  0.5675  CalSVC C=1.0
+  0.5663  CalSVC C=2.0
+  0.5599  LR C=1.0

@@ -1,0 +1,53 @@
+================================================================
+MENTAL HEALTH CLASSIFICATION v17 (fine-tune → embeddings → SVM/MLP)
+Device:          mps
+Transformer:     ai-forever/ruRoberta-large
+FT epochs:       3
+Use augment:     True
+Augment path:    augmented_data.csv
+FT output dir:   .bert_ft_out/epochs_3_aug_1
+================================================================
+
+[1/6] Loading & filtering data...
+Raw: 37,024 rows, 9 classes
+Dropped ambiguous classes: 1,325 → 35,699 rows, 6 classes
+Base after min-words (7): dropped 3,274 → 32,425 kept
+Base after de-dup:                dropped 88 → 32,337 kept
+
+Per-class counts:
+tag
+депрессия         18013
+тревожное р-во     6111
+ОКР                3063
+ПРЛ                2861
+БАР                1423
+шизофрения          866
+
+[2/6] Per-class cap=12000 + 80/20 stratified split + optional train-only augmentation...
+After capping: 26,324 samples
+tag
+депрессия         12000
+тревожное р-во     6111
+ОКР                3063
+ПРЛ                2861
+БАР                1423
+шизофрения          866
+Classes (6): ['БАР', 'ОКР', 'ПРЛ', 'депрессия', 'тревожное р-во', 'шизофрения']
+Base train class counts: {'БАР': np.int64(1138), 'ОКР': np.int64(2450), 'ПРЛ': np.int64(2289), 'депрессия': np.int64(9600), 'тревожное р-во': np.int64(4889), 'шизофрения': np.int64(693)}
+
+Loading train-only augmented data: augmented_data.csv
+Augmented raw: 11,805 rows, 6 classes
+Augmented dropped ambiguous classes: 0 → 11,805 rows
+Augmented after min-words (7): dropped 0 → 11,805 kept
+Augmented after de-dup:                dropped 0 → 11,805 kept
+Augmented train class counts: {'БАР': np.int64(1995), 'ОКР': np.int64(1985), 'ПРЛ': np.int64(1895), 'депрессия': np.int64(1940), 'тревожное р-во': np.int64(1990), 'шизофрения': np.int64(2000)}
+Merged 11,805 augmented rows into TRAIN only.
+Train: 32,864 (21,059 base + 11,805 augmented) | Test: 5,265 (base only)
+Final train class counts: {'БАР': np.int64(3133), 'ОКР': np.int64(4435), 'ПРЛ': np.int64(4184), 'депрессия': np.int64(11540), 'тревожное р-во': np.int64(6879), 'шизофрения': np.int64(2693)}
+Test class counts (evaluation set, no augmented data): {'БАР': np.int64(285), 'ОКР': np.int64(613), 'ПРЛ': np.int64(572), 'депрессия': np.int64(2400), 'тревожное р-во': np.int64(1222), 'шизофрения': np.int64(173)}
+Total base texts used for split/evaluation accounting: 26,324
+
+[3/6] Fine-tuning transformer classifier before embedding extraction...
+Fine-tune requested device: mps
+Gradient checkpointing enabled.
+Trainer device: mps

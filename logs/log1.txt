@@ -1,0 +1,161 @@
+================================================================
+MENTAL HEALTH CLASSIFICATION v17 (fine-tune → embeddings → SVM/MLP)
+Device:          cuda
+Transformer:     intfloat/multilingual-e5-large
+================================================================
+
+[1/6] Loading & filtering data...
+Raw: 37,024 rows, 9 classes
+Dropped ambiguous classes: 1,325 → 35,699 rows, 6 classes
+Base after min-words (7): dropped 3,274 → 32,425 kept
+Base after de-dup:                dropped 88 → 32,337 kept
+
+Per-class counts:
+tag
+депрессия         18013
+тревожное р-во     6111
+ОКР                3063
+ПРЛ                2861
+БАР                1423
+шизофрения          866
+
+[2/6] Per-class cap=12000 + 80/20 stratified split + train-only augmentation...
+After capping: 26,324 samples
+tag
+депрессия         12000
+тревожное р-во     6111
+ОКР                3063
+ПРЛ                2861
+БАР                1423
+шизофрения          866
+Classes (6): ['БАР', 'ОКР', 'ПРЛ', 'депрессия', 'тревожное р-во', 'шизофрения']
+Base train class counts: {'БАР': np.int64(1138), 'ОКР': np.int64(2450), 'ПРЛ': np.int64(2289), 'депрессия': np.int64(9600), 'тревожное р-во': np.int64(4889), 'шизофрения': np.int64(693)}
+
+[WARN] Augmented data file not found: augmented_data_progress.csv; training uses base data only.
+Train: 21,059 (21,059 base + 0 augmented) | Test: 5,265 (base only)
+Final train class counts: {'БАР': np.int64(1138), 'ОКР': np.int64(2450), 'ПРЛ': np.int64(2289), 'депрессия': np.int64(9600), 'тревожное р-во': np.int64(4889), 'шизофрения': np.int64(693)}
+Test class counts (evaluation set, no augmented data): {'БАР': np.int64(285), 'ОКР': np.int64(613), 'ПРЛ': np.int64(572), 'депрессия': np.int64(2400), 'тревожное р-во': np.int64(1222), 'шизофрения': np.int64(173)}
+Total base texts used for split/evaluation accounting: 26,324
+
+[3/6] Fine-tuning transformer classifier before embedding extraction...
+Fine-tune requested device: cuda
+Gradient checkpointing enabled.
+Trainer device: cuda:0
+{'loss': '1.579', 'grad_norm': '12.06', 'learning_rate': '4.949e-06', 'epoch': '0.07593'}
+{'loss': '1.416', 'grad_norm': '11.09', 'learning_rate': '9.899e-06', 'epoch': '0.1519'}
+{'loss': '1.249', 'grad_norm': '12.12', 'learning_rate': '1.495e-05', 'epoch': '0.2278'}
+{'loss': '1.197', 'grad_norm': '15.46', 'learning_rate': '2e-05', 'epoch': '0.3037'}
+{'loss': '1.196', 'grad_norm': '19.44', 'learning_rate': '1.944e-05', 'epoch': '0.3797'}
+{'loss': '1.152', 'grad_norm': '13.99', 'learning_rate': '1.887e-05', 'epoch': '0.4556'}
+{'loss': '1.108', 'grad_norm': '14.37', 'learning_rate': '1.831e-05', 'epoch': '0.5315'}
+{'loss': '1.069', 'grad_norm': '11.46', 'learning_rate': '1.775e-05', 'epoch': '0.6074'}
+{'loss': '1.044', 'grad_norm': '12.96', 'learning_rate': '1.719e-05', 'epoch': '0.6834'}
+{'loss': '1.1', 'grad_norm': '10.96', 'learning_rate': '1.662e-05', 'epoch': '0.7593'}
+{'loss': '0.9878', 'grad_norm': '12.8', 'learning_rate': '1.606e-05', 'epoch': '0.8352'}
+{'loss': '1.03', 'grad_norm': '13.59', 'learning_rate': '1.55e-05', 'epoch': '0.9112'}
+{'loss': '0.9658', 'grad_norm': '20.47', 'learning_rate': '1.494e-05', 'epoch': '0.9871'}
+{'loss': '0.8852', 'grad_norm': '19.22', 'learning_rate': '1.437e-05', 'epoch': '1.063'}
+{'loss': '0.8647', 'grad_norm': '15.6', 'learning_rate': '1.381e-05', 'epoch': '1.139'}
+{'loss': '0.8892', 'grad_norm': '27.09', 'learning_rate': '1.325e-05', 'epoch': '1.215'}
+{'loss': '0.8363', 'grad_norm': '17.23', 'learning_rate': '1.269e-05', 'epoch': '1.291'}
+{'loss': '0.8885', 'grad_norm': '22', 'learning_rate': '1.212e-05', 'epoch': '1.367'}
+{'loss': '0.8614', 'grad_norm': '23.07', 'learning_rate': '1.156e-05', 'epoch': '1.443'}
+{'loss': '0.8527', 'grad_norm': '31.02', 'learning_rate': '1.1e-05', 'epoch': '1.519'}
+{'loss': '0.842', 'grad_norm': '19.96', 'learning_rate': '1.044e-05', 'epoch': '1.595'}
+{'loss': '0.8557', 'grad_norm': '19.02', 'learning_rate': '9.873e-06', 'epoch': '1.67'}
+{'loss': '0.8357', 'grad_norm': '21.14', 'learning_rate': '9.316e-06', 'epoch': '1.746'}
+{'loss': '0.8344', 'grad_norm': '20.32', 'learning_rate': '8.754e-06', 'epoch': '1.822'}
+{'loss': '0.8309', 'grad_norm': '24.68', 'learning_rate': '8.191e-06', 'epoch': '1.898'}
+{'loss': '0.7999', 'grad_norm': '24.79', 'learning_rate': '7.629e-06', 'epoch': '1.974'}
+{'loss': '0.6782', 'grad_norm': '22.14', 'learning_rate': '7.066e-06', 'epoch': '2.05'}
+{'loss': '0.6165', 'grad_norm': '15.24', 'learning_rate': '6.504e-06', 'epoch': '2.126'}
+{'loss': '0.5788', 'grad_norm': '21.74', 'learning_rate': '5.941e-06', 'epoch': '2.202'}
+{'loss': '0.5471', 'grad_norm': '25.71', 'learning_rate': '5.378e-06', 'epoch': '2.278'}
+{'loss': '0.5726', 'grad_norm': '23.37', 'learning_rate': '4.816e-06', 'epoch': '2.354'}
+{'loss': '0.5975', 'grad_norm': '26.59', 'learning_rate': '4.253e-06', 'epoch': '2.43'}
+{'loss': '0.6109', 'grad_norm': '28.03', 'learning_rate': '3.691e-06', 'epoch': '2.506'}
+{'loss': '0.5758', 'grad_norm': '45.65', 'learning_rate': '3.128e-06', 'epoch': '2.582'}
+{'loss': '0.6038', 'grad_norm': '24.2', 'learning_rate': '2.565e-06', 'epoch': '2.658'}
+{'loss': '0.5454', 'grad_norm': '28.7', 'learning_rate': '2.003e-06', 'epoch': '2.733'}
+{'loss': '0.6048', 'grad_norm': '24.44', 'learning_rate': '1.44e-06', 'epoch': '2.809'}
+{'loss': '0.5894', 'grad_norm': '33.58', 'learning_rate': '8.776e-07', 'epoch': '2.885'}
+{'loss': '0.5706', 'grad_norm': '30.95', 'learning_rate': '3.15e-07', 'epoch': '2.961'}
+{'train_runtime': '488.6', 'train_samples_per_second': '129.3', 'train_steps_per_second': '8.086', 'train_loss': '0.8642', 'epoch': '3'}
+BERT fine-tune training: 488.9s
+BERT-FT end-to-end: F1=0.6253  Acc=0.6914
+
+[4/6] Extracting embeddings from fine-tuned transformer encoder...
+  Encoding 21,059 train texts on cuda:0...
+    encoded 6,400/21,059
+    encoded 12,800/21,059
+    encoded 19,200/21,059
+  train embeddings: (21059, 1024) (84.7s)
+  Encoding 5,265 test texts on cuda:0...
+  test embeddings: (5265, 1024) (21.2s)
+Fine-tuned embeddings: train=(21059, 1024), test=(5265, 1024)
+
+[5/6] Building TF-IDF features and combined matrices...
+TF-IDF (sparse): (21059, 153052)
+Reducing TF-IDF to dense 256-d via TruncatedSVD...
+TF-IDF (dense):  (21059, 256)  explained_var=0.162
+Combined features: (21059, 1280)
+
+[6/6] Benchmarking SVM / MLP on TF-IDF / fine-tuned BERT / combined ...
+  SVM(C=0.1) @ tfidf                   | F1=0.4785  Acc=0.5605  (3.4s)
+  SVM(C=0.3) @ tfidf                   | F1=0.4785  Acc=0.5605  (3.0s)
+  SVM(C=0.5) @ tfidf                   | F1=0.4783  Acc=0.5601  (3.7s)
+  SVM(C=1.0) @ tfidf                   | F1=0.4783  Acc=0.5601  (3.1s)
+  MLP @ tfidf                          | F1=0.4721  Acc=0.6080  (3.0s)
+  SVM(C=0.1) @ bert_ft_emb             | F1=0.5809  Acc=0.6454  (46.6s)
+  SVM(C=0.3) @ bert_ft_emb             | F1=0.5781  Acc=0.6433  (63.1s)
+  SVM(C=0.5) @ bert_ft_emb             | F1=0.5788  Acc=0.6433  (81.9s)
+  SVM(C=1.0) @ bert_ft_emb             | F1=0.5778  Acc=0.6425  (153.9s)
+  MLP @ bert_ft_emb                    | F1=0.6181  Acc=0.6826  (4.9s)
+  SVM(C=0.1) @ combined_ft_emb         | F1=0.5748  Acc=0.6403  (71.0s)
+  SVM(C=0.3) @ combined_ft_emb         | F1=0.5689  Acc=0.6365  (127.4s)
+  SVM(C=0.5) @ combined_ft_emb         | F1=0.5667  Acc=0.6344  (114.2s)
+  SVM(C=1.0) @ combined_ft_emb         | F1=0.5605  Acc=0.6300  (190.5s)
+  MLP @ combined_ft_emb                | F1=0.6163  Acc=0.6779  (5.2s)
+
+================================================================
+BEST MODEL: BERT-FT @ end-to-end classifier
+================================================================
+Accuracy:      0.6914  (69.14%)
+F1 (macro):    0.6253
+F1 (weighted): 0.6848
+
+=== Per-class report ===
+                precision    recall  f1-score   support
+
+           БАР     0.6387    0.4281    0.5126       285
+           ОКР     0.6920    0.5938    0.6392       613
+           ПРЛ     0.6611    0.4843    0.5590       572
+     депрессия     0.6926    0.8225    0.7520      2400
+тревожное р-во     0.7218    0.6538    0.6861      1222
+    шизофрения     0.6047    0.6012    0.6029       173
+
+      accuracy                         0.6914      5265
+     macro avg     0.6685    0.5973    0.6253      5265
+  weighted avg     0.6901    0.6914    0.6848      5265
+
+================================================================
+✅ TARGET ACHIEVED: F1 macro = 0.6253 >= 0.6
+================================================================
+
+=== All Results Summary (F1 macro, Acc) ===
+  F1=0.6253  Acc=0.6914  BERT-FT @ end-to-end classifier
+  F1=0.6181  Acc=0.6826  MLP @ bert_ft_emb
+  F1=0.6163  Acc=0.6779  MLP @ combined_ft_emb
+  F1=0.5809  Acc=0.6454  SVM(C=0.1) @ bert_ft_emb
+  F1=0.5788  Acc=0.6433  SVM(C=0.5) @ bert_ft_emb
+  F1=0.5781  Acc=0.6433  SVM(C=0.3) @ bert_ft_emb
+  F1=0.5778  Acc=0.6425  SVM(C=1.0) @ bert_ft_emb
+  F1=0.5748  Acc=0.6403  SVM(C=0.1) @ combined_ft_emb
+  F1=0.5689  Acc=0.6365  SVM(C=0.3) @ combined_ft_emb
+  F1=0.5667  Acc=0.6344  SVM(C=0.5) @ combined_ft_emb
+  F1=0.5605  Acc=0.6300  SVM(C=1.0) @ combined_ft_emb
+  F1=0.4785  Acc=0.5605  SVM(C=0.1) @ tfidf
+  F1=0.4785  Acc=0.5605  SVM(C=0.3) @ tfidf
+  F1=0.4783  Acc=0.5601  SVM(C=0.5) @ tfidf
+  F1=0.4783  Acc=0.5601  SVM(C=1.0) @ tfidf
+  F1=0.4721  Acc=0.6080  MLP @ tfidf

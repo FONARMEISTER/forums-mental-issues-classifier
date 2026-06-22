@@ -1,0 +1,129 @@
+================================================================
+MENTAL HEALTH CLASSIFICATION v15 (E5-large + bias tuning)
+Device: mps
+================================================================
+
+[1/6] Loading & filtering data...
+Raw: 66,459 rows, 9 classes
+Dropped ambiguous classes: 3,123 → 63,336 rows, 6 classes
+After min-words (7): dropped 16,995 → 46,341 kept
+After de-dup:                dropped 142 → 46,199 kept
+
+Per-class counts:
+tag
+депрессия         27292
+тревожное р-во     7645
+ОКР                4095
+ПРЛ                3694
+БАР                2008
+шизофрения         1465
+
+[2/6] Per-class cap=10000 + 65/15/20 stratified split...
+After capping: 28,907 samples  (≥ 25000 ✔)
+tag
+депрессия         10000
+тревожное р-во     7645
+ОКР                4095
+ПРЛ                3694
+БАР                2008
+шизофрения         1465
+Classes (6): ['БАР', 'ОКР', 'ПРЛ', 'депрессия', 'тревожное р-во', 'шизофрения']
+Train: 18,789 | Val: 4,336 | Test: 5,782
+
+[3/6] Building TF-IDF features...
+TF-IDF combined: (18789, 129563)
+
+[4/6] Computing E5-large sentence embeddings (cached)...
+Loading model: intfloat/multilingual-e5-large
+  Encoding 18,789 train texts...
+  train embeddings: (18789, 1024) (275.2s)
+  Encoding 4,336 val texts...
+  val embeddings: (4336, 1024) (65.1s)
+  Encoding 5,782 test texts...
+  test embeddings: (5782, 1024) (88.5s)
+Embeddings cached.
+Embeddings: train=(18789, 1024), val=(4336, 1024), test=(5782, 1024)
+Combined features: (18789, 130587)
+
+[5/6] Training base classifiers...
+  LR C=1.0: val F1=0.5320 | test F1=0.5274  test Acc=0.5616
+  LR C=2.0: val F1=0.5286 | test F1=0.5343  test Acc=0.5694
+  LR C=4.0: val F1=0.5268 | test F1=0.5375  test Acc=0.5737
+  CalSVC C=0.1: val F1=0.5244 | test F1=0.5409  test Acc=0.5981
+  CalSVC C=0.3: val F1=0.5239 | test F1=0.5400  test Acc=0.6007
+  CalSVC C=0.5: val F1=0.5251 | test F1=0.5370  test Acc=0.5996
+  CalSVC C=1.0: val F1=0.5181 | test F1=0.5287  test Acc=0.5927
+  CalSVC C=2.0: val F1=0.5158 | test F1=0.5278  test Acc=0.5911
+
+[6/6] Per-class log-bias tuning (coordinate-ascent on val macro-F1)...
+
+Tuned results per base model:
+  LR C=1.0  tuned: val F1=0.5417 | test F1=0.5438  Acc=0.5842  biases=[-0.2 -0.2 -0.2  0.2  0.2 -0.2]
+  LR C=2.0  tuned: val F1=0.5413 | test F1=0.5368  Acc=0.5815  biases=[-0.1 -0.4 -0.5  0.2  0.3 -0.1]
+  LR C=4.0  tuned: val F1=0.5379 | test F1=0.5395  Acc=0.5879  biases=[-0.3 -0.4 -0.5  0.3  0.2  0. ]
+  CalSVC C=0.1  tuned: val F1=0.5513 | test F1=0.5478  Acc=0.5884  biases=[ 0.4  0.1  0.4 -0.2  0.   0.7]
+  CalSVC C=0.3  tuned: val F1=0.5494 | test F1=0.5493  Acc=0.5949  biases=[ 0.8  0.   0.1 -0.1  0.   0.5]
+  CalSVC C=0.5  tuned: val F1=0.5482 | test F1=0.5476  Acc=0.5934  biases=[ 0.8  0.   0.1 -0.1  0.   0.6]
+  CalSVC C=1.0  tuned: val F1=0.5435 | test F1=0.5469  Acc=0.5899  biases=[ 0.7  0.1  0.1 -0.2  0.   0.5]
+  CalSVC C=2.0  tuned: val F1=0.5447 | test F1=0.5405  Acc=0.5844  biases=[ 0.7  0.1  0.1 -0.2 -0.2  0.5]
+
+Probability-averaging ensembles:
+
+Top-2: ['LR C=1.0', 'LR C=2.0']
+  ENS top2 raw   : test F1=0.5328  Acc=0.5669
+  ENS top2 tuned : val F1=0.5444 | test F1=0.5465  Acc=0.5894  biases=[-0.4  -0.55 -0.5   0.05  0.05 -0.4 ]
+
+Top-3: ['LR C=1.0', 'LR C=2.0', 'LR C=4.0']
+  ENS top3 raw   : test F1=0.5355  Acc=0.5697
+  ENS top3 tuned : val F1=0.5434 | test F1=0.5414  Acc=0.5877  biases=[-0.45 -0.7  -0.8   0.    0.   -0.45]
+
+Top-4: ['LR C=1.0', 'LR C=2.0', 'LR C=4.0', 'CalSVC C=0.5']
+  ENS top4 raw   : test F1=0.5424  Acc=0.5813
+  ENS top4 tuned : val F1=0.5419 | test F1=0.5469  Acc=0.5948  biases=[-0.25 -0.3  -0.55  0.   -0.25 -0.05]
+
+Top-5: ['LR C=1.0', 'LR C=2.0', 'LR C=4.0', 'CalSVC C=0.5', 'CalSVC C=0.1']
+  ENS top5 raw   : test F1=0.5493  Acc=0.5898
+  ENS top5 tuned : val F1=0.5451 | test F1=0.5495  Acc=0.5936  biases=[-0.15 -0.35 -0.35 -0.15 -0.25 -0.1 ]
+
+================================================================
+BEST MODEL: ENS top5 (tuned)
+================================================================
+Accuracy:      0.5936  (59.36%)
+F1 (macro):    0.5495
+F1 (weighted): 0.5905
+
+=== Per-class report ===
+                precision    recall  f1-score   support
+
+           БАР     0.4613    0.3856    0.4201       402
+           ОКР     0.6179    0.5153    0.5619       819
+           ПРЛ     0.5676    0.4547    0.5049       739
+     депрессия     0.5809    0.6930    0.6320      2000
+тревожное р-во     0.6680    0.6318    0.6494      1529
+    шизофрения     0.4926    0.5700    0.5285       293
+
+      accuracy                         0.5936      5782
+     macro avg     0.5647    0.5417    0.5495      5782
+  weighted avg     0.5947    0.5936    0.5905      5782
+
+================================================================
+❌ TARGET NOT MET:  F1 macro = 0.5495 < 0.6
+================================================================
+
+=== All Results Summary ===
+  0.5495  ENS top5 (tuned)
+  0.5493  ENS top5 raw
+  0.5493  CalSVC C=0.3 (tuned)
+  0.5478  CalSVC C=0.1 (tuned)
+  0.5476  CalSVC C=0.5 (tuned)
+  0.5469  ENS top4 (tuned)
+  0.5469  CalSVC C=1.0 (tuned)
+  0.5465  ENS top2 (tuned)
+  0.5438  LR C=1.0 (tuned)
+  0.5424  ENS top4 raw
+  0.5414  ENS top3 (tuned)
+  0.5405  CalSVC C=2.0 (tuned)
+  0.5395  LR C=4.0 (tuned)
+  0.5368  LR C=2.0 (tuned)
+  0.5355  ENS top3 raw
+  0.5328  ENS top2 raw

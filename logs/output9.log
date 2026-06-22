@@ -1,0 +1,155 @@
+================================================================
+MENTAL HEALTH CLASSIFICATION v14 (E5-large + MLP + Linear ensemble)
+Device: mps
+================================================================
+
+[1/7] Loading data...
+Raw: 66,459 rows, 9 classes
+tag
+депрессия                   37639
+тревожное р-во              10069
+ОКР                          5393
+ПРЛ                          5219
+БАР                          2961
+тревожное р-во/невроз        2217
+шизофрения                   2055
+паранойя                      905
+тревожное р-во/депрессия        1
+
+[2/7] Drop ambiguous classes...
+Dropped 3,123 → 63,336 rows, 6 classes
+
+[3/7] Cleaning texts...
+Filtered min-words (7): 16,995 dropped → 46,341 kept
+tag
+депрессия         27354
+тревожное р-во     7713
+ОКР                4102
+ПРЛ                3696
+БАР                2011
+шизофрения         1465
+
+[4/7] Per-class cap = 5000 + 80/20 stratified split...
+After capping: 21,274 samples  (≥ 2500 ✔)
+tag
+тревожное р-во    5000
+депрессия         5000
+ОКР               4102
+ПРЛ               3696
+БАР               2011
+шизофрения        1465
+Classes (6): ['БАР', 'ОКР', 'ПРЛ', 'депрессия', 'тревожное р-во', 'шизофрения']
+Train: 17,019 | Test: 4,255
+
+[5/7] Building TF-IDF features...
+TF-IDF combined: (17019, 188830)
+
+[6/7] Computing sentence embeddings (cached)...
+Loading cache:
+  .emb_cache/v12_train_17019_422aea8c.npy
+  .emb_cache/v12_test_4255_2cb5725a.npy
+Embeddings: train=(17019, 1024), test=(4255, 1024)
+Combined features: (17019, 189854)
+
+[7/7] Training models...
+
+--- A. LogisticRegression (combined TF-IDF + 4× embeddings) ---
+  LR comb C=1.0: Acc=0.5643  F1=0.5554
+  LR comb C=2.0: Acc=0.5687  F1=0.5589
+  LR comb C=4.0: Acc=0.5659  F1=0.5564
+
+--- B. Calibrated LinearSVC (combined) ---
+  CalSVC comb C=0.3: Acc=0.5713  F1=0.5581
+  CalSVC comb C=1.0: Acc=0.5723  F1=0.5591
+
+--- C. MLP head on embeddings ---
+  [seed=42 epoch 01] loss=1.6656 acc=0.4435 f1=0.4317
+  [seed=42 epoch 02] loss=1.4517 acc=0.4545 f1=0.4374
+  [seed=42 epoch 04] loss=1.3588 acc=0.4905 f1=0.4752
+  [seed=42 epoch 06] loss=1.3340 acc=0.4996 f1=0.4919
+  [seed=42 epoch 08] loss=1.3044 acc=0.4921 f1=0.4827
+  [seed=42 epoch 10] loss=1.2960 acc=0.5072 f1=0.4949
+  [seed=42 epoch 12] loss=1.2838 acc=0.5187 f1=0.5088
+  [seed=42 epoch 14] loss=1.2664 acc=0.4924 f1=0.4843
+  [seed=42 epoch 16] loss=1.2589 acc=0.5048 f1=0.4967
+  [seed=42 epoch 18] loss=1.2521 acc=0.5072 f1=0.4988
+  [seed=42 epoch 20] loss=1.2483 acc=0.5100 f1=0.5016
+  MLP(seed=42): Acc=0.5227  F1=0.5122
+  [seed=7 epoch 01] loss=1.6730 acc=0.4465 f1=0.4361
+  [seed=7 epoch 02] loss=1.4575 acc=0.4625 f1=0.4480
+  [seed=7 epoch 04] loss=1.3627 acc=0.4811 f1=0.4679
+  [seed=7 epoch 06] loss=1.3341 acc=0.4964 f1=0.4934
+  [seed=7 epoch 08] loss=1.3095 acc=0.5142 f1=0.5043
+  [seed=7 epoch 10] loss=1.2908 acc=0.4933 f1=0.4809
+  [seed=7 epoch 12] loss=1.2787 acc=0.4992 f1=0.4882
+  [seed=7 epoch 14] loss=1.2639 acc=0.5006 f1=0.4891
+  [seed=7 epoch 16] loss=1.2558 acc=0.4978 f1=0.4882
+  [seed=7 epoch 18] loss=1.2510 acc=0.5154 f1=0.5044
+  [seed=7 epoch 20] loss=1.2478 acc=0.5090 f1=0.5000
+  MLP(seed=7): Acc=0.5154  F1=0.5044
+  [seed=2024 epoch 01] loss=1.6754 acc=0.3702 f1=0.3515
+  [seed=2024 epoch 02] loss=1.4623 acc=0.4592 f1=0.4521
+  [seed=2024 epoch 04] loss=1.3640 acc=0.5034 f1=0.4951
+  [seed=2024 epoch 06] loss=1.3351 acc=0.5100 f1=0.5024
+  [seed=2024 epoch 08] loss=1.3182 acc=0.4891 f1=0.4855
+  [seed=2024 epoch 10] loss=1.2934 acc=0.4987 f1=0.4919
+  [seed=2024 epoch 12] loss=1.2755 acc=0.5062 f1=0.4997
+  [seed=2024 epoch 14] loss=1.2676 acc=0.5018 f1=0.4897
+  [seed=2024 epoch 16] loss=1.2573 acc=0.5055 f1=0.4991
+  [seed=2024 epoch 18] loss=1.2531 acc=0.5114 f1=0.5033
+  [seed=2024 epoch 20] loss=1.2484 acc=0.5102 f1=0.5016
+  MLP(seed=2024): Acc=0.5114  F1=0.5033
+  MLP avg(3 seeds): Acc=0.5168  F1=0.5071
+
+--- D. Final probability ensemble ---
+Available proba-bank models (sorted by F1):
+   0.5591  CalSVC comb C=1.0
+   0.5589  LR comb C=2.0
+   0.5581  CalSVC comb C=0.3
+   0.5564  LR comb C=4.0
+   0.5554  LR comb C=1.0
+   0.5122  MLP(seed=42)
+   0.5071  MLP avg(3 seeds)
+   0.5044  MLP(seed=7)
+   0.5033  MLP(seed=2024)
+Best linear model for blending: CalSVC comb C=1.0
+  BLEND 0.6*MLP + 0.4*CalSVC comb C=1.0: Acc=0.5558  F1=0.5463
+  BLEND MLP+['CalSVC comb C=1.0', 'LR comb C=2.0']: Acc=0.5706  F1=0.5614
+
+================================================================
+BEST MODEL: BLEND MLP+['CalSVC comb C=1.0', 'LR comb C=2.0']
+================================================================
+Accuracy:      0.5706  (57.06%)
+F1 (macro):    0.5614
+F1 (weighted): 0.5705
+
+=== Per-class report ===
+                precision    recall  f1-score   support
+
+           БАР     0.5134    0.4279    0.4668       402
+           ОКР     0.6458    0.6285    0.6370       821
+           ПРЛ     0.5515    0.5575    0.5545       739
+     депрессия     0.5113    0.5440    0.5271      1000
+тревожное р-во     0.6229    0.6030    0.6128      1000
+    шизофрения     0.5292    0.6177    0.5701       293
+
+      accuracy                         0.5706      4255
+     macro avg     0.5624    0.5631    0.5614      4255
+  weighted avg     0.5719    0.5706    0.5705      4255
+
+================================================================
+❌ TARGET NOT MET:  F1 macro = 0.5614 < 0.6
+================================================================
+
+=== All Results Summary ===
+  0.5614  BLEND MLP+['CalSVC comb C=1.0', 'LR comb C=2.0']
+  0.5591  CalSVC comb C=1.0
+  0.5589  LR comb C=2.0
+  0.5581  CalSVC comb C=0.3
+  0.5564  LR comb C=4.0
+  0.5554  LR comb C=1.0
+  0.5463  BLEND 0.6*MLP + 0.4*CalSVC comb C=1.0
+  0.5122  MLP(seed=42)
+  0.5071  MLP avg(3 seeds)
+  0.5044  MLP(seed=7)
+  0.5033  MLP(seed=2024)

@@ -1,0 +1,9 @@
+[debug] Logging HTTP requests/responses to eliza_debug.log
+[eliza] endpoint: https://api.eliza.yandex.net/openrouter/v1/chat/completions
+[eliza] model:    deepseek/deepseek-v4-flash
+[eliza] rps cap:  0.1 (10.000s between calls)
+[eliza] batch:    60 texts per request
+[filter] total rows: 66460; already done: 65260; remaining: 1200
+[filter] batches: 20 (size up to 60)
+[filter] relevant: 37024, noise: 29436, error/unknown: 0
+[filter] wrote data_filtered.csv (37024 rows)

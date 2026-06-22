@@ -1,0 +1,99 @@
+================================================================
+MENTAL HEALTH CLASSIFICATION v16 (RF/SVM/MLP × TF-IDF/BERT/combined)
+Device:          mps
+Embedding model: ai-forever/ru-en-RoSBERTa
+================================================================
+
+[1/5] Loading & filtering data...
+Raw: 31,402 rows, 9 classes
+Dropped ambiguous classes: 252 → 31,150 rows, 7 classes
+After min-words (5): dropped 1,061 → 30,089 kept
+After de-dup:                dropped 108 → 29,981 kept
+
+Per-class counts:
+tag
+депрессия                16092
+тревожное р-во            5699
+ОКР                       2695
+ПРЛ                       2627
+БАР                       1313
+тревожное р-во/невроз      845
+шизофрения                 710
+
+[2/5] Per-class cap=15000 + 80/20 stratified split...
+After capping: 28,889 samples  (≥ 20000 ✔)
+tag
+депрессия                15000
+тревожное р-во            5699
+ОКР                       2695
+ПРЛ                       2627
+БАР                       1313
+тревожное р-во/невроз      845
+шизофрения                 710
+Classes (7): ['БАР', 'ОКР', 'ПРЛ', 'депрессия', 'тревожное р-во', 'тревожное р-во/невроз', 'шизофрения']
+Train class counts: {'БАР': np.int64(1050), 'ОКР': np.int64(2156), 'ПРЛ': np.int64(2102), 'депрессия': np.int64(12000), 'тревожное р-во': np.int64(4559), 'тревожное р-во/невроз': np.int64(676), 'шизофрения': np.int64(568)}
+Train: 23,111 | Test: 5,778
+Total used texts (train+test): 28,889  (≥ MIN_KEEP ✔)
+
+[3/5] Building TF-IDF features...
+TF-IDF (sparse): (23111, 158842)
+Reducing TF-IDF to dense 256-d via TruncatedSVD...
+TF-IDF (dense):  (23111, 256)  explained_var=0.165
+
+[4/5] Computing sentence embeddings with 'ai-forever/ru-en-RoSBERTa' (cached)...
+Loading model: ai-forever/ru-en-RoSBERTa
+  Encoding 23,111 train texts...
+  train embeddings: (23111, 1024) (334.5s)
+  Encoding 5,778 test texts...
+  test embeddings: (5778, 1024) (92.5s)
+Embeddings cached.
+Embeddings: train=(23111, 1024), test=(5778, 1024)
+Combined features: (23111, 1280)
+
+[5/5] Benchmarking RF / SVM / MLP on TF-IDF / BERT / combined ...
+  RF @ tfidf             | F1=0.1896  Acc=0.5630  (9.2s)
+  SVM @ tfidf            | F1=0.4421  Acc=0.5684  (2.0s)
+  MLP @ tfidf            | F1=0.4488  Acc=0.6267  (1.1s)
+  RF @ bert              | F1=0.1959  Acc=0.5675  (14.9s)
+  SVM @ bert             | F1=0.4625  Acc=0.5808  (46.0s)
+  MLP @ bert             | F1=0.5062  Acc=0.6601  (2.3s)
+  RF @ combined          | F1=0.1940  Acc=0.5687  (14.6s)
+  SVM @ combined         | F1=0.4788  Acc=0.5974  (88.9s)
+  MLP @ combined         | F1=0.5136  Acc=0.6713  (2.3s)
+
+================================================================
+BEST MODEL: MLP @ combined
+================================================================
+Accuracy:      0.6713  (67.13%)
+F1 (macro):    0.5136
+F1 (weighted): 0.6492
+
+=== Per-class report ===
+                       precision    recall  f1-score   support
+
+                  БАР     0.5592    0.3232    0.4096       263
+                  ОКР     0.6555    0.4731    0.5496       539
+                  ПРЛ     0.7356    0.3657    0.4885       525
+            депрессия     0.6790    0.8870    0.7692      3000
+       тревожное р-во     0.6600    0.5193    0.5812      1140
+тревожное р-во/невроз     0.4923    0.1893    0.2735       169
+           шизофрения     0.6526    0.4366    0.5232       142
+
+             accuracy                         0.6713      5778
+            macro avg     0.6335    0.4563    0.5136      5778
+         weighted avg     0.6666    0.6713    0.6492      5778
+
+================================================================
+❌ TARGET NOT MET:  F1 macro = 0.5136 < 0.6
+================================================================
+
+=== All Results Summary (F1 macro, Acc) ===
+  F1=0.5136  Acc=0.6713  MLP @ combined
+  F1=0.5062  Acc=0.6601  MLP @ bert
+  F1=0.4788  Acc=0.5974  SVM @ combined
+  F1=0.4625  Acc=0.5808  SVM @ bert
+  F1=0.4488  Acc=0.6267  MLP @ tfidf
+  F1=0.4421  Acc=0.5684  SVM @ tfidf
+  F1=0.1959  Acc=0.5675  RF @ bert
+  F1=0.1940  Acc=0.5687  RF @ combined
+  F1=0.1896  Acc=0.5630  RF @ tfidf

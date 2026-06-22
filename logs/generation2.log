@@ -1,0 +1,10 @@
+[eliza] endpoint: https://api.eliza.yandex.net/openrouter/v1/chat/completions
+[eliza] model:    deepseek/deepseek-v4-flash
+[eliza] rps cap:  1
+[eliza] batch:    5; per-tag: 2000; workers: 4
+[debug] log: eliza_generate_debug.log
+[output] progress -> augmented_data_progress.csv; final -> augmented_data.csv
+[gen] шизофрения: already have 0 / 2000
+[gen] queued 400 requests (batch up to 5)
+[gen] шизофрения: collected 2000
+[gen] wrote augmented_data.csv (11805 rows)

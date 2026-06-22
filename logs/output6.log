@@ -1,0 +1,136 @@
+============================================================
+MENTAL HEALTH CLASSIFICATION v12 (balanced + LR ensemble)
+============================================================
+
+[1/7] Loading data...
+Raw dataset: 66,459 samples, 9 classes
+tag
+депрессия                   37639
+тревожное р-во              10069
+ОКР                          5393
+ПРЛ                          5219
+БАР                          2961
+тревожное р-во/невроз        2217
+шизофрения                   2055
+паранойя                      905
+тревожное р-во/депрессия        1
+
+[2/7] Dropping ambiguous classes...
+Dropped 3,123 samples → 63,336 remaining, 6 classes
+tag
+депрессия         37639
+тревожное р-во    10069
+ОКР                5393
+ПРЛ                5219
+БАР                2961
+шизофрения         2055
+
+[3/7] Cleaning texts...
+Removed 16,995 texts with < 7 non-stopword tokens → 46,341 remaining
+tag
+депрессия         27354
+тревожное р-во     7713
+ОКР                4102
+ПРЛ                3696
+БАР                2011
+шизофрения         1465
+
+[4/7] Applying per-class cap = 2500 + 80/20 stratified split...
+After capping: 13,476 samples  (≥ 2500 ✔)
+tag
+ОКР               2500
+депрессия         2500
+тревожное р-во    2500
+ПРЛ               2500
+БАР               2011
+шизофрения        1465
+
+Train: 10,780 | Test: 2,696
+
+Train distribution:
+тревожное р-во    2000
+ПРЛ               2000
+депрессия         2000
+ОКР               2000
+БАР               1608
+шизофрения        1172
+
+Test distribution:
+ОКР               500
+ПРЛ               500
+тревожное р-во    500
+депрессия         500
+БАР               403
+шизофрения        293
+
+[5/7] Building TF-IDF features...
+Word TF-IDF: (10780, 48307)
+Char TF-IDF: (10780, 90001)
+Combined TF-IDF: (10780, 138308)
+
+[6/7] Computing sentence embeddings...
+Using device: mps
+Loading embeddings from cache...
+Train embeddings: (10780, 1024)
+Test embeddings:  (2696, 1024)
+Combined features: (10780, 139332)
+
+[7/7] Training classifiers...
+
+--- A. LogisticRegression (combined TF-IDF + 4× embeddings) ---
+  LR combined C=0.5: Acc=0.5297  F1=0.5314
+  LR combined C=1.0: Acc=0.5356  F1=0.5372
+  LR combined C=2.0: Acc=0.5319  F1=0.5346
+  LR combined C=4.0: Acc=0.5323  F1=0.5344
+
+--- B. LogisticRegression on embeddings only (multinomial) ---
+  LR emb-only C=1.0: Acc=0.4803  F1=0.4800
+  LR emb-only C=3.0: Acc=0.4889  F1=0.4893
+  LR emb-only C=10.0: Acc=0.4989  F1=0.5003
+
+--- C. Calibrated LinearSVC (combined) ---
+  CalSVC combined C=0.1: Acc=0.5427  F1=0.5456
+  CalSVC combined C=0.3: Acc=0.5415  F1=0.5442
+  CalSVC combined C=1.0: Acc=0.5423  F1=0.5447
+
+--- D. Probability-averaging ensemble (top 3 by macro F1) ---
+Ensembling: ['CalSVC combined C=0.1', 'CalSVC combined C=1.0', 'CalSVC combined C=0.3']
+  ENSEMBLE top3: Acc=0.5427  F1=0.5451
+
+============================================================
+BEST MODEL: CalSVC combined C=0.1
+============================================================
+Accuracy:      0.5427  (54.27%)
+F1 (macro):    0.5456
+F1 (weighted): 0.5429
+
+=== Per-class Report ===
+                precision    recall  f1-score   support
+
+           БАР     0.5536    0.4739    0.5107       403
+           ОКР     0.5902    0.5760    0.5830       500
+           ПРЛ     0.5350    0.5660    0.5500       500
+     депрессия     0.4387    0.4720    0.4547       500
+тревожное р-во     0.5822    0.5740    0.5780       500
+    шизофрения     0.5875    0.6075    0.5973       293
+
+      accuracy                         0.5427      2696
+     macro avg     0.5478    0.5449    0.5456      2696
+  weighted avg     0.5446    0.5427    0.5429      2696
+
+============================================================
+❌ TARGET NOT MET: F1 macro = 0.5456 < 0.6
+============================================================
+
+=== All Results Summary ===
+  0.5456  CalSVC combined C=0.1
+  0.5451  ENSEMBLE top3
+  0.5447  CalSVC combined C=1.0
+  0.5442  CalSVC combined C=0.3
+  0.5372  LR combined C=1.0
+  0.5346  LR combined C=2.0
+  0.5344  LR combined C=4.0
+  0.5314  LR combined C=0.5
+  0.5003  LR emb-only C=10.0
+  0.4893  LR emb-only C=3.0
+  0.4800  LR emb-only C=1.0

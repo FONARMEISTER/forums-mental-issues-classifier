@@ -1,0 +1,22 @@
+================================================================
+MENTAL HEALTH CLASSIFICATION v15 (E5-large + bias tuning)
+Device: mps
+================================================================
+
+[1/6] Loading & filtering data...
+Raw: 66,459 rows, 9 classes
+Dropped ambiguous classes: 3,123 → 63,336 rows, 6 classes
+After min-words (10): dropped 24,316 → 39,020 kept
+After de-dup:                dropped 116 → 38,904 kept
+
+Per-class counts:
+tag
+депрессия         22797
+тревожное р-во     6554
+ОКР                3557
+ПРЛ                3096
+БАР                1674
+шизофрения         1226
+
+[2/6] Per-class cap=8000 + 65/15/20 stratified split...
+After capping: 24,107 samples  (< 25000 ✘)

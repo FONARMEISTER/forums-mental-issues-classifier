@@ -1,0 +1,18 @@
+[eliza] endpoint: https://api.eliza.yandex.net/openrouter/v1/chat/completions
+[eliza] model:    deepseek/deepseek-v4-flash
+[eliza] rps cap:  1
+[eliza] batch:    5; per-tag: 2000; workers: 4
+[debug] log: eliza_generate_debug.log
+[output] progress -> augmented_data_progress.csv; final -> augmented_data.csv
+[gen] БАР: already have 0 / 2000
+[gen] ОКР: already have 0 / 2000
+[gen] ПРЛ: already have 0 / 2000
+[gen] депрессия: already have 0 / 2000
+[gen] тревожной р-во: already have 0 / 2000
+[gen] queued 2000 requests (batch up to 5)
+[gen] БАР: collected 1995
+[gen] ОКР: collected 1985
+[gen] ПРЛ: collected 1895
+[gen] депрессия: collected 1940
+[gen] тревожной р-во: collected 1990
+[gen] wrote augmented_data.csv (9805 rows)
